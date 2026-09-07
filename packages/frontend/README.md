@@ -6,7 +6,7 @@ this), then run `python main.py`; no Node build on their machine.
 
 ## What's in the wheel
 
-The payload is the built SPA under `inline_studio_frontend/static/` (`index.html` + hashed `assets/`).
+The payload is the built SPA under `openchar_frontend/static/` (`index.html` + hashed `assets/`).
 Core resolves this dir via `inline_core.server.frontend.resolve_frontend_root` and mounts it.
 
 ## Publishing (release only)
@@ -14,7 +14,7 @@ Core resolves this dir via `inline_core.server.frontend.resolve_frontend_root` a
 ```bash
 # in the Inline Studio repo
 npm run build:spa                       # -> dist-web/
-cp -r dist-web/* packages/frontend/inline_studio_frontend/static/
+cp -r dist-web/* packages/frontend/openchar_frontend/static/
 cd packages/frontend
 python -m build && twine upload dist/*  # publish to PyPI
 ```

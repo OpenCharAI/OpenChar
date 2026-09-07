@@ -104,7 +104,7 @@ src/
     store/              Zustand stores (moodboardStore, frameStore, generationStore, ...)
     views/              feature-foldered screens (ProjectLauncher, Workspace, Moodboard, Library, ...)
     components/         shared UI
-vite.config.spa.ts      builds the SPA -> dist-web/ (the inline_studio_frontend PyPI wheel payload)
+vite.config.spa.ts      builds the SPA -> dist-web/ (the openchar_frontend PyPI wheel payload)
 ```
 
 ### Storage - a portable project folder (owned by Core)

@@ -90,9 +90,9 @@ Both versions are printed at launch, and Inline Studio checks PyPI once a day in
 says so when either half is behind:
 
 ```
-Versions: inline-core 1.3.13, inline-studio-frontend 1.3.12
-UPDATE AVAILABLE: inline-studio-frontend 1.3.12 -> 1.3.13
-  Update with: ./webui.sh --install  (or: pip install -U inline-studio-frontend)
+Versions: openchar-core 1.3.16, openchar-frontend 1.3.15
+UPDATE AVAILABLE: openchar-frontend 1.3.15 -> 1.3.16
+  Update with: ./webui.sh --install  (or: pip install -U openchar-frontend)
 ```
 
 Set `INLINE_NO_UPDATE_CHECK=1` to skip the check.
