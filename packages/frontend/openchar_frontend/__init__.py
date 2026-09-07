@@ -6,7 +6,7 @@ mounts it (see ``inline_core.server.frontend.resolve_frontend_root``), so end us
 and get the UI with no Node build.
 
 Populate ``static/`` at publish time with the SPA build:  ``npm run build:spa``  in the Inline Studio
-repo, then copy ``dist-web/*`` into ``inline_studio_frontend/static/``.
+repo, then copy ``dist-web/*`` into ``openchar_frontend/static/``.
 """
 
 from __future__ import annotations

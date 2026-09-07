@@ -9,6 +9,6 @@ from importlib.metadata import PackageNotFoundError, version
 try:
     #: Resolved from the installed package, so pyproject.toml stays the only place a release is
     #: bumped. An editable install records this at install time; reinstall after bumping.
-    __version__ = version("inline-core")
+    __version__ = version("openchar-core")
 except PackageNotFoundError:  # a source tree that was never installed
     __version__ = "0.0.0"

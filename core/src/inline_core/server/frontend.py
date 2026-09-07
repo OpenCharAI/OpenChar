@@ -3,7 +3,7 @@
 Resolution order, most specific first:
   1. ``INLINE_FRONTEND_ROOT`` - a local SPA build dir (set directly or via ``main.py
      --front-end-root``); the dev loop - rebuild the UI locally without republishing the package.
-  2. the installed ``inline_studio_frontend`` package's ``static/`` dir - the default for end users
+  2. the installed ``openchar_frontend`` package's ``static/`` dir - the default for end users
      (``pip install`` pulls the built frontend; no Node needed).
   3. ``None`` - Core runs API-only (no UI mounted).
 
@@ -27,10 +27,10 @@ def resolve_frontend_root() -> str | None:
         return str(root) if _has_index(root) else None
 
     try:
-        import inline_studio_frontend  # type: ignore[import-not-found]
+        import openchar_frontend  # type: ignore[import-not-found]
     except ModuleNotFoundError:
         return None
-    pkg_file = getattr(inline_studio_frontend, "__file__", None)
+    pkg_file = getattr(openchar_frontend, "__file__", None)
     if not pkg_file:
         return None
     static = Path(pkg_file).parent / "static"

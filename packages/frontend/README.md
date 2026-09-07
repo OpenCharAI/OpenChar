@@ -1,7 +1,7 @@
-# inline-studio-frontend
+# openchar-frontend
 
 Prebuilt Inline Studio web UI (SPA), packaged so **Inline Core** can serve it on a single port -
-mirroring ComfyUI's `comfyui-frontend-package`. End users `pip install inline-core` (which depends on
+mirroring ComfyUI's `comfyui-frontend-package`. End users `pip install openchar-core` (which depends on
 this), then run `python main.py`; no Node build on their machine.
 
 ## What's in the wheel

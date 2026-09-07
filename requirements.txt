@@ -5,7 +5,7 @@
 #     pip install -r requirements.txt
 #     inline-studio            # serves the UI + API on http://127.0.0.1:8848
 #
-# inline-studio-frontend is the prebuilt SPA wheel; Core serves it automatically (no Node needed).
+# openchar-frontend is the prebuilt SPA wheel; Core serves it automatically (no Node needed).
 #
 # NVIDIA GPU users, read this: PyPI's default `torch` is a CPU-ONLY build on Windows (the Linux
 # wheels bundle CUDA). Installing without one of the lines below on Windows gives you a working
@@ -22,7 +22,7 @@
 # --extra-index-url https://download.pytorch.org/whl/cu126
 #
 # `[all]` is the whole app in one line: engine + local model runtime + LoRA trainer + server. For a
-# hosted-only (fal) setup with no local GPU generation, use `inline-core[server]` instead - that
+# hosted-only (fal) setup with no local GPU generation, use `openchar-core[server]` instead - that
 # skips the ~2.5GB torch download entirely.
-inline-core[all]
-inline-studio-frontend
+openchar-core[all]
+openchar-frontend

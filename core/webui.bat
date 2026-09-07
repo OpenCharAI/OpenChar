@@ -226,11 +226,11 @@ if "!TORCH_FORCE!"=="1" if defined TORCH_CHOICE (
 rem --upgrade, because uv leaves an already-satisfied requirement alone: without it a re-run of
 rem --install kept whatever UI was first installed while the engine moved on underneath it.
 set "FRONTEND_VERSION="
-uv pip install --python "!TARGET_PY!" --upgrade inline-studio-frontend >nul 2>nul && (
-  for /f "usebackq delims=" %%v in (`"!TARGET_PY!" -c "from importlib.metadata import version; print(version('inline-studio-frontend'))" 2^>nul`) do set "FRONTEND_VERSION=%%v"
+uv pip install --python "!TARGET_PY!" --upgrade openchar-frontend >nul 2>nul && (
+  for /f "usebackq delims=" %%v in (`"!TARGET_PY!" -c "from importlib.metadata import version; print(version('openchar-frontend'))" 2^>nul`) do set "FRONTEND_VERSION=%%v"
   if not defined FRONTEND_VERSION set "FRONTEND_VERSION=unknown"
-  echo Installed the prebuilt web UI ^(inline-studio-frontend !FRONTEND_VERSION!^).
-) || echo Note: inline-studio-frontend not installed; the UI will build from source or run API-only.
+  echo Installed the prebuilt web UI ^(openchar-frontend !FRONTEND_VERSION!^).
+) || echo Note: openchar-frontend not installed; the UI will build from source or run API-only.
 call :write_install_record
 rem A CPU-only wheel on a GPU box is silent at runtime and ~100x slower, so say it here rather than
 rem let it through: it can still happen if PyPI ever outranks the CUDA index on version.
@@ -242,8 +242,8 @@ echo          .\webui.bat --install --torch-index !TORCH_CHOICE! --recreate
 
 :install_done
 set "CORE_VERSION=unknown"
-for /f "usebackq delims=" %%v in (`"!TARGET_PY!" -c "from importlib.metadata import version; print(version('inline-core'))" 2^>nul`) do set "CORE_VERSION=%%v"
-echo Installed inline-core !CORE_VERSION! with extras: !EXTRAS!. Start with: .\webui.bat
+for /f "usebackq delims=" %%v in (`"!TARGET_PY!" -c "from importlib.metadata import version; print(version('openchar-core'))" 2^>nul`) do set "CORE_VERSION=%%v"
+echo Installed openchar-core !CORE_VERSION! with extras: !EXTRAS!. Start with: .\webui.bat
 exit /b 0
 
 rem One query for both, keeping the highest capability. set /a not a findstr guard: `if LSS` would
@@ -342,7 +342,7 @@ exit /b 1
 :frontend_available
 rem Succeeds (errorlevel 0) when a web UI is resolvable; sets INLINE_FRONTEND_ROOT for a local build.
 if defined INLINE_FRONTEND_ROOT if exist "%INLINE_FRONTEND_ROOT%\index.html" exit /b 0
-"%PY%" -c "import os,sys; import inline_studio_frontend as f; sys.exit(0 if os.path.isfile(os.path.join(os.path.dirname(f.__file__),'static','index.html')) else 1)" >nul 2>nul && exit /b 0
+"%PY%" -c "import os,sys; import openchar_frontend as f; sys.exit(0 if os.path.isfile(os.path.join(os.path.dirname(f.__file__),'static','index.html')) else 1)" >nul 2>nul && exit /b 0
 if exist "..\dist-web\index.html" (
   for %%I in ("..\dist-web") do set "INLINE_FRONTEND_ROOT=%%~fI"
   exit /b 0
@@ -351,8 +351,8 @@ exit /b 1
 
 :ensure_frontend
 call :frontend_available && exit /b 0
-echo No web UI found - installing the prebuilt package (inline-studio-frontend)...
-%PIP% inline-studio-frontend >nul
+echo No web UI found - installing the prebuilt package (openchar-frontend)...
+%PIP% openchar-frontend >nul
 call :frontend_available && exit /b 0
 if exist "..\package.json" (
   where npm >nul 2>nul && (
@@ -364,7 +364,7 @@ if exist "..\package.json" (
   )
 )
 echo WARNING: no web UI available - serving API only. Install Node to build it, or run
-echo          %PIP% inline-studio-frontend   once it's published.
+echo          %PIP% openchar-frontend   once it's published.
 exit /b 0
 
 :rebuild_frontend

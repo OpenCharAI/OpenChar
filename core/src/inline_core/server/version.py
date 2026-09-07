@@ -15,8 +15,8 @@ from typing import Any, cast
 
 from ..config import data_dir
 
-CORE_PACKAGE = "inline-core"
-FRONTEND_PACKAGE = "inline-studio-frontend"
+CORE_PACKAGE = "openchar-core"
+FRONTEND_PACKAGE = "openchar-frontend"
 
 #: A day: long enough that a restart loop never hammers PyPI, short enough to notice a release.
 CACHE_TTL_SECONDS = 24 * 60 * 60
@@ -153,10 +153,10 @@ def _is_editable(package: str) -> bool:
 def _is_package_static(frontend_root: str) -> bool:
     """INLINE_FRONTEND_ROOT can name the package's own static dir, which is still the package."""
     try:
-        import inline_studio_frontend  # type: ignore[import-not-found]
+        import openchar_frontend  # type: ignore[import-not-found]
     except ModuleNotFoundError:
         return False
-    pkg_file = getattr(inline_studio_frontend, "__file__", None)
+    pkg_file = getattr(openchar_frontend, "__file__", None)
     if not pkg_file:
         return False
     static = Path(pkg_file).parent / "static"

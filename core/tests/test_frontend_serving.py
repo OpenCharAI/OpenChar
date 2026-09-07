@@ -39,7 +39,7 @@ def test_resolve_none_when_dir_has_no_index(monkeypatch, tmp_path):
 
 
 def _without_frontend_package(monkeypatch):
-    """Make ``import inline_studio_frontend`` fail, whether or not it is installed here.
+    """Make ``import openchar_frontend`` fail, whether or not it is installed here.
 
     The package ships in the published wheel and is absent from a bare dev checkout, so asserting
     on the ambient environment tests the machine rather than the resolver.
@@ -47,19 +47,19 @@ def _without_frontend_package(monkeypatch):
     real_import = builtins.__import__
 
     def _blocked(name, *args, **kwargs):
-        if name == "inline_studio_frontend":
+        if name == "openchar_frontend":
             raise ModuleNotFoundError(f"No module named {name!r}")
         return real_import(name, *args, **kwargs)
 
-    monkeypatch.delitem(sys.modules, "inline_studio_frontend", raising=False)
+    monkeypatch.delitem(sys.modules, "openchar_frontend", raising=False)
     monkeypatch.setattr(builtins, "__import__", _blocked)
 
 
 def _with_frontend_package(monkeypatch, static: Path):
     """Stand in for the installed package, rooted at ``static``'s parent."""
-    module = types.ModuleType("inline_studio_frontend")
+    module = types.ModuleType("openchar_frontend")
     module.__file__ = str(static.parent / "__init__.py")
-    monkeypatch.setitem(sys.modules, "inline_studio_frontend", module)
+    monkeypatch.setitem(sys.modules, "openchar_frontend", module)
 
 
 def test_resolve_none_when_unset_and_package_absent(monkeypatch):

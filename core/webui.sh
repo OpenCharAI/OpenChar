@@ -3,7 +3,7 @@
 # Launch Inline Studio (Inline Core + the web UI) on one port. Friendly flags map onto the engine's
 # environment knobs, so you do not have to remember the INLINE_* variables. This is the one command
 # an end user needs: it installs deps (with --install), makes sure a web UI is present (the prebuilt
-# inline-studio-frontend package, or a local SPA build), then serves the app. Run `./webui.sh --help`.
+# openchar-frontend package, or a local SPA build), then serves the app. Run `./webui.sh --help`.
 #
 #   ./webui.sh                              # loopback, port 8848 (UI + API)
 #   ./webui.sh --listen --port 9000         # bind all interfaces on 9000
@@ -86,7 +86,7 @@ Development
 
 Web UI
   Served automatically on the same port. On start, if no UI is found we install the prebuilt
-  inline-studio-frontend package, else build it from source (npm) when this is the repo checkout,
+  openchar-frontend package, else build it from source (npm) when this is the repo checkout,
   else run API-only. Point at a local build with INLINE_FRONTEND_ROOT (or main.py --front-end-root).
 EOF
 }
@@ -372,12 +372,12 @@ if [[ "$RUN_INSTALL" -eq 1 ]]; then
   # Pull the prebuilt web UI so there's no Node build (best-effort - it may not be published yet).
   # --upgrade, because uv leaves an already-satisfied requirement alone: without it a re-run of
   # --install kept whatever UI was first installed while the engine moved on underneath it.
-  if uv pip install --python "$TARGET_PY" --upgrade inline-studio-frontend >/dev/null 2>&1; then
+  if uv pip install --python "$TARGET_PY" --upgrade openchar-frontend >/dev/null 2>&1; then
     FRONTEND_VERSION="$("$TARGET_PY" -c 'from importlib.metadata import version
-print(version("inline-studio-frontend"))' 2>/dev/null || true)"
-    echo "Installed the prebuilt web UI (inline-studio-frontend ${FRONTEND_VERSION:-unknown})."
+print(version("openchar-frontend"))' 2>/dev/null || true)"
+    echo "Installed the prebuilt web UI (openchar-frontend ${FRONTEND_VERSION:-unknown})."
   else
-    echo "Note: inline-studio-frontend not installed; the UI will build from source or run API-only."
+    echo "Note: openchar-frontend not installed; the UI will build from source or run API-only."
   fi
   # A CPU-only wheel on a GPU box is silent at runtime and ~100x slower, so say it here rather than
   # let the resolve fail quietly - it can still happen if PyPI outranks the CUDA index on version.
@@ -416,8 +416,8 @@ with open(os.environ["INLINE_RECORD"], "w", encoding="utf-8") as fh:
     json.dump(rec, fh, indent=2)
 ' 2>/dev/null || true
   CORE_VERSION="$("$TARGET_PY" -c 'from importlib.metadata import version
-print(version("inline-core"))' 2>/dev/null || true)"
-  echo "Installed inline-core ${CORE_VERSION:-unknown} with extras: $EXTRAS. Start with: ./webui.sh"
+print(version("openchar-core"))' 2>/dev/null || true)"
+  echo "Installed openchar-core ${CORE_VERSION:-unknown} with extras: $EXTRAS. Start with: ./webui.sh"
   exit 0
 fi
 
@@ -432,7 +432,7 @@ elif [[ -x "$VENV_PY" ]]; then
     echo "NOTE: running from $VENV_DIR, not the environment active in this shell ($FOREIGN)."
   fi
 elif [[ -n "$ACTIVE_ENV" && -x "$ACTIVE_ENV/bin/python" ]]; then
-  PY="$ACTIVE_ENV/bin/python"      # inline-core pip-installed into the user's own environment
+  PY="$ACTIVE_ENV/bin/python"      # openchar-core pip-installed into the user's own environment
 elif python3 -c "import inline_core" >/dev/null 2>&1; then
   PY="$(command -v python3)"       # ...or onto the ambient interpreter (pip/pipx)
 else
@@ -454,7 +454,7 @@ frontend_available() {
   if "${PY_CMD[@]}" - <<'PY' >/dev/null 2>&1; then return 0; fi
 import os, sys
 try:
-    import inline_studio_frontend as f
+    import openchar_frontend as f
 except ModuleNotFoundError:
     sys.exit(1)
 sys.exit(0 if os.path.isfile(os.path.join(os.path.dirname(f.__file__), "static", "index.html")) else 1)
@@ -507,14 +507,14 @@ ensure_smart_memory_deps() {
 # Make sure a UI is present before serving: try the pip package, then a local npm build, else warn.
 ensure_frontend() {
   frontend_available && return 0
-  echo "No web UI found - installing the prebuilt package (inline-studio-frontend)…"
-  "${PIP_INSTALL[@]}" inline-studio-frontend >/dev/null && frontend_available && return 0
+  echo "No web UI found - installing the prebuilt package (openchar-frontend)…"
+  "${PIP_INSTALL[@]}" openchar-frontend >/dev/null && frontend_available && return 0
   if [[ -f "../package.json" ]] && command -v npm >/dev/null 2>&1; then
     echo "Building the web UI from source (npm)…"
     ( cd .. && npm ci && npm run build:spa ) && frontend_available && return 0
   fi
   echo "WARNING: no web UI available - serving API only. Install Node to build it, or run" >&2
-  echo "         '${PIP_INSTALL[*]} inline-studio-frontend' once it's published." >&2
+  echo "         '${PIP_INSTALL[*]} openchar-frontend' once it's published." >&2
   return 0
 }
 

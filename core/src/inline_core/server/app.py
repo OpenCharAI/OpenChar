@@ -90,7 +90,7 @@ def _setup_app_logging() -> None:
     logger = logging.getLogger("inline_core")
     if not logger.handlers:
         handler = logging.StreamHandler()
-        handler.setFormatter(logging.Formatter("%(levelname)s:     [inline-core] %(message)s"))
+        handler.setFormatter(logging.Formatter("%(levelname)s:     [openchar-core] %(message)s"))
         logger.addHandler(handler)
         logger.propagate = False
     logger.setLevel(os.environ.get("INLINE_LOG_LEVEL", "INFO").upper())
