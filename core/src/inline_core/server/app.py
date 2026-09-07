@@ -404,7 +404,6 @@ def create_app(
         activity.set_canceller("training", training_service.cancel)
         activity_registry = activity
         # Training as graph nodes, so one Run walks dataset -> caption -> train in order.
-        from ..models.training import register_training_nodes
 
         def bind_training_node(item_id: str, run_id: str) -> None:
             """Persist the run on its node and tell the canvas, so Resume survives a reload."""
@@ -419,20 +418,10 @@ def create_app(
             )
             events.broadcast("events:trainingNodeBound", {"itemId": item_id, "runId": run_id})
 
-        training_bridge = register_training_nodes(
-            registry, training_service, on_bound=bind_training_node
-        )
         # Reference sweeps: a durable service off the graph, driven by a node that blocks on it.
-        from ..models.character import register_finetune_node
-        from ..studio.finetune import CharacterTuning, renderer_for
 
         def tuning_root() -> Path:
             return studio_store.folder() / "tuning_runs"
-
-        tuning_store = FileTakeStore(takes_root)
-        tuning_service = CharacterTuning(
-            events, lambda target: renderer_for(target, tuning_store, policy), tuning_root
-        )
 
         def bind_tuning_node(item_id: str, run_id: str) -> None:
             """Persist the run on its node and tell the canvas, so a Logger can find its stream."""
@@ -447,24 +436,38 @@ def create_app(
             )
             events.broadcast("events:tuneNodeBound", {"itemId": item_id, "runId": run_id})
 
-        tuning_bridge = register_finetune_node(
-            registry, tuning_service, tuning_root, on_bound=bind_tuning_node
-        )
-        activity.set_canceller("tuning", tuning_service.cancel)
-
+        # Both node families need the model runtime. A hosted-only install has no torch and still
+        # serves every fal node, so they are skipped rather than taking the whole server down.
+        tuning_service: Any = None
         try:
-            from ..models.character import set_training_bridge
-
-            set_training_bridge(training_bridge)
+            from ..models.character import register_finetune_node, set_training_bridge
+            from ..models.training import register_training_nodes
+            from ..studio.finetune import CharacterTuning, renderer_for
         except ImportError:
-            pass
+            logging.getLogger("inline_core").info(
+                "No model runtime installed, so training and sweep nodes are unavailable."
+            )
+        else:
+            training_bridge = register_training_nodes(
+                registry, training_service, on_bound=bind_training_node
+            )
+            tuning_store = FileTakeStore(takes_root)
+            tuning_service = CharacterTuning(
+                events, lambda target: renderer_for(target, tuning_store, policy), tuning_root
+            )
+            tuning_bridge = register_finetune_node(
+                registry, tuning_service, tuning_root, on_bound=bind_tuning_node
+            )
+            activity.set_canceller("tuning", tuning_service.cancel)
+            set_training_bridge(training_bridge)
         # Rescan on change, so a new character reaches the node's dropdown without a restart.
         characters_service = Characters(studio_store, events, on_change=catalog.rescan)
         core_generation.set_characters(characters_service)
         # The hosted path needs it more, not less: on fal there is nothing to check before the call.
         fal_generation.set_characters(characters_service)
         # So a finetune node can read a finished sweep back after a reload.
-        characters_service.set_tuning(tuning_service)
+        if tuning_service is not None:
+            characters_service.set_tuning(tuning_service)
 
         def node_param_fallbacks(node_type: str) -> dict[str, Any]:
             """What a node's params resolve to when the item stores none, for the PNG recipe."""
