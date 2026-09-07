@@ -1,6 +1,6 @@
 <div align="center">
 
-# Inline Studio
+# OpenChar Studio
 
 **Consistent AI characters on a node canvas.**
 
@@ -62,8 +62,8 @@ and the UI.
 **macOS / Linux:**
 
 ```bash
-git clone https://github.com/inlineresearch/Inline-Studio.git
-cd Inline-Studio/core
+git clone https://github.com/OpenCharAI/OpenChar
+cd OpenChar/core
 ./webui.sh --install --extra all
 ./webui.sh                         # http://127.0.0.1:8848
 ```
@@ -71,8 +71,8 @@ cd Inline-Studio/core
 **Windows** (use `webui.bat`; `webui.sh` is a bash script and will not run in PowerShell):
 
 ```powershell
-git clone https://github.com/inlineresearch/Inline-Studio.git
-cd Inline-Studio\core
+git clone https://github.com/OpenCharAI/OpenChar
+cd OpenChar/core
 .\webui.bat --install --extra all
 .\webui.bat
 
