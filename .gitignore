@@ -15,7 +15,7 @@ docs/
 .claude
 
 nohup.out
-Inline-Studio.code-workspace
+*.code-workspace
 
 # Local generation sweeps (LoRA regression renders, contact sheets)
 outputs/

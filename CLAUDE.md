@@ -1,31 +1,54 @@
-# Inline Studio - Engineering Guide
+# OpenChar Studio - Engineering Guide
 
-Inline Studio is an **experimentation layer for visual artists**: a free-form node canvas for
+OpenChar Studio is an **experimentation layer for visual artists**: a free-form node canvas for
 building generative pipelines frame-by-frame. The **Inline Core** engine (`core/`) does the actual
 image/video generation behind each frame - diffusion models run locally (Z-Image Turbo and others),
 plus closed models via fal.ai.
 
-> **Naming:** the project is **Inline Studio** - that is the only name. The npm package is
-> `inline-studio`. **Do not use the old "Storyline" codename** anywhere new (docs, identifiers, UI
-> strings). Some legacy `STORYLINE_*` env vars and `.storyline` paths still exist in code and are
-> being renamed to `inline-studio` - treat them as deprecated, don't add more.
+> **Naming:** the project is **OpenChar Studio**, shortened to **OpenChar**. It was renamed from
+> Inline Studio; use the new name in anything you write. **Do not use the old "Storyline" codename**
+> anywhere new (docs, identifiers, UI strings). Legacy `STORYLINE_*` env vars and `.storyline` paths
+> still exist in code - treat them as deprecated, don't add more.
 >
-> Inline Studio is the **single repo**: it holds the UI client (`src/`) **and** the **Inline Core**
+> The rename is deliberately **incomplete at the code level, and that is not a bug to fix**. These
+> stay as they are until a migration is planned, because changing one breaks installs or on-disk
+> data:
+>
+> | Still named for Inline                                      | Why it stays                                                                                                      |
+> | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+> | `INLINE_*` env vars (`INLINE_HOST`, `INLINE_MODELS_DIR`, …) | A rename breaks every existing launch script and RunPod template.                                                 |
+> | The `inline_core` Python module and `core/src/inline_core/` | The import path users and extensions already depend on.                                                           |
+> | `.inlinestudio` project folders                             | On-disk data in the wild; renaming orphans people's projects.                                                     |
+> | `inlinestudio.art`                                          | The live domain.                                                                                                  |
+> | `"name": "inline-studio"` in `package.json`                 | Nothing is published to npm - this package builds the SPA, which ships inside the `openchar-frontend` PyPI wheel. |
+>
+> What **has** been renamed: the product name, the GitHub org, this repo, and the PyPI packages
+> (`openchar-core`, `openchar-frontend`).
+>
+> OpenChar Studio is the **single repo**: it holds the UI client (`src/`) **and** the **Inline Core**
 > Python generation engine (`core/`, brought in via `git subtree`). One process serves both -
 > `cd core && python main.py --front-end-root ../dist-web` runs Core and serves the built UI on one
 > port.
 
-> **GitHub org: `inlineresearch`.** Every repo lives there - never `inline-studio/` or any other
-> org in a URL, manifest, or doc.
+> **GitHub org: `OpenCharAI`.** The org moved from `inlineresearch` and this repo moved with it,
+> from `Inline-Studio` to `OpenChar`. The old URLs still 301-redirect, so a stale `git remote` keeps
+> working - never write an `inlineresearch/` URL in anything new. Note the other repos kept their
+> `Inline-*` names; only the org and this repo were renamed.
 >
-> | Repo                                                                                                              | What it is                                            |
-> | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-> | [`inlineresearch/Inline-Studio`](https://github.com/inlineresearch/Inline-Studio)                                 | This repo: the UI client + Inline Core                |
-> | [`inlineresearch/Inline-Core`](https://github.com/inlineresearch/Inline-Core)                                     | The engine's own repo (subtree source for `core/`)    |
-> | [`inlineresearch/Inline-Registry`](https://github.com/inlineresearch/Inline-Registry)                             | The published extension index the Available tab reads |
-> | [`inlineresearch/Inline-Studio-Extension-Guide`](https://github.com/inlineresearch/Inline-Studio-Extension-Guide) | The reference extension authors copy                  |
+> | Repo                                                                                                      | What it is                                            |
+> | --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+> | [`OpenCharAI/OpenChar`](https://github.com/OpenCharAI/OpenChar)                                           | This repo: the UI client + Inline Core                |
+> | [`OpenCharAI/Inline-Core`](https://github.com/OpenCharAI/Inline-Core)                                     | The engine's own repo (subtree source for `core/`)    |
+> | [`OpenCharAI/Inline-Registry`](https://github.com/OpenCharAI/Inline-Registry)                             | The published extension index the Available tab reads |
+> | [`OpenCharAI/Inline-Studio-Extension-Guide`](https://github.com/OpenCharAI/Inline-Studio-Extension-Guide) | The reference extension authors copy                  |
 >
-> **Hugging Face org: [`inlineresearch`](https://huggingface.co/inlineresearch)** - published models and datasets trained with the app.
+> **This app is local-first and needs no account.** It runs on the user's own GPU. Do not add a
+> hosted service, a login, a telemetry call or a billing dependency to this repo. Generation lives
+> in `core/` and stays there.
+>
+> **Hugging Face org: [`inlineresearch`](https://huggingface.co/inlineresearch)** - published models
+> and datasets trained with the app. **This did NOT move to OpenCharAI**; there is no OpenCharAI org
+> on Hugging Face. Leave these URLs alone.
 >
 > | Hugging Face repo                                                                                   | What it is                                              |
 > | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
@@ -56,7 +79,7 @@ If you're tempted to treat a frame as a file, stop - the take history is the cor
 
 ## Architecture
 
-Inline Studio is a **web SPA** (React, `src/`) served by **Inline Core** (the Python engine, `core/`)
+OpenChar Studio is a **web SPA** (React, `src/`) served by **Inline Core** (the Python engine, `core/`)
 on a single port. One process: `core/main.py` runs Core, which serves the built UI _and_ is the app's
 backend. (The former Electron desktop app + Node web server were **retired** - the whole backend was
 ported to Python. If you find a reference to `electron/`, `server/`, `window.inlineStudio`, or a

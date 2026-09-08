@@ -1,19 +1,27 @@
 # Inline Core - Engineering Guide
 
-Inline Core is the **generation engine behind Inline** (the Storyline / Inline Studio UI client). It
+Inline Core is the **generation engine behind OpenChar Studio** (the UI client). It
 takes a **typed node graph (JSON)** and returns immutable renders ("takes"), running image and video
 models across macOS, Windows, and Linux - from CPU-only boxes and low-VRAM laptops up to multi-GPU
 machines that split a single image's sampling across GPUs (via xDiT). **It is the render backend that
-replaces ComfyUI for Inline.**
+replaces ComfyUI for OpenChar.**
 
-> The UI client lives in the separate **Inline Studio** repo
-> ([`inlineresearch/Inline-Studio`](https://github.com/inlineresearch/Inline-Studio)), which vendors
-> this engine under `core/` via `git subtree`. It drives the engine over the `/v1` HTTP + websocket
-> API; Inline Core is headless and knows nothing about the UI.
+> The UI client lives in the separate **OpenChar Studio** repo
+> ([`OpenCharAI/OpenChar`](https://github.com/OpenCharAI/OpenChar)), which vendors this engine under
+> `core/` via `git subtree`. It drives the engine over the `/v1` HTTP + websocket API; Inline Core is
+> headless and knows nothing about the UI.
 
-> **GitHub org: `inlineresearch`** - never `inline-studio/` or any other org in a URL, manifest, or
-> doc. Sibling repos: `Inline-Studio` (UI + this engine), `Inline-Registry` (the published extension
-> index served to the Available tab), `Inline-Studio-Extension-Guide` (the reference extension).
+> **Naming:** the product was renamed from Inline Studio to **OpenChar Studio**, and this engine is
+> still called **Inline Core**. That is deliberate: the PyPI package is `openchar-core` but the
+> import path is `inline_core`, because users and extensions already depend on it. Do not rename the
+> module, the `INLINE_*` env vars, or the `.inlinestudio` project folders.
+
+> **GitHub org: `OpenCharAI`** - it moved from `inlineresearch`, and the old URLs 301-redirect, so a
+> stale `git remote` still works. Never write an `inlineresearch/` URL in anything new. Sibling
+> repos: `OpenChar` (UI + this engine, formerly `Inline-Studio`), `Inline-Core` (this engine's own
+> repo), `Inline-Registry` (the published extension index served to the Available tab),
+> `Inline-Studio-Extension-Guide` (the reference extension). Only the org and the UI repo were
+> renamed; the rest kept their `Inline-*` names.
 
 > Read this file before changing code. It defines the architecture and the non-negotiable rules.
 > `README.md` is the user/product-facing version of the same story; this is the engineering contract.
@@ -29,7 +37,7 @@ Graph (typed nodes + edges)  →  Run  →  Take[]  (immutable renders)
 - **Run** - one execution of a target node's upstream closure. Durable (survives a restart) and
   pollable; progress streams over a websocket.
 - **Take** - one immutable output. Regenerating adds a take; **nothing is overwritten** (this mirrors
-  Inline Studio's frame/take model - the take history is the core value Comfy lacks).
+  OpenChar Studio's frame/take model - the take history is the core value Comfy lacks).
 - **Node** - has a **descriptor** (the data half: ports, params, file pickers - served at
   `/v1/models`) and a **runner** (the behavior half). A descriptor with no runner is served and
   type-checked but cannot execute yet.
@@ -185,7 +193,7 @@ between nodes and are never takes.
 - **Multi-GPU** - `INLINE_PARALLEL` (e.g. `pipefusion=2`, `pipefusion=2,ulysses=2`); degrees multiply
   to the world size, which must equal the GPU count.
 
-### The `/v1` API (the contract with Inline Studio)
+### The `/v1` API (the contract with OpenChar Studio)
 
 - `POST /v1/runs {graph, target}` → `{runId}` (validated up front; 422 on a bad graph, 409 on a
   reused `clientRunId` with a different graph).
