@@ -386,6 +386,10 @@ It runs as a single process on one port: the Inline Core engine (Python) serves 
 the generation. No desktop install, no separate backend. For the engineering story see
 [core/README.md](core/README.md) and [core/CLAUDE.md](core/CLAUDE.md).
 
+Every route the app exposes is documented at **`/api`** while it is running - open
+<http://127.0.0.1:8848/api>. The reference is served by the app itself and needs no network. Like
+the rest of the surface it is unauthenticated, so `--listen` publishes it too.
+
 [**Follow the Animated Short Film tutorial →**](https://inlinestudio.art/projects/circuit-race)
 
 ## Extensions

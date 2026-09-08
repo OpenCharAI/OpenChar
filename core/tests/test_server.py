@@ -67,6 +67,18 @@ def _wait_done(client: TestClient, run_id: str) -> dict[str, Any]:
     raise AssertionError("run did not finish")
 
 
+def test_health_returns_every_key_it_declares() -> None:
+    """`response_model` is live on this one route, so a field it omits is a key silently dropped."""
+    with _client() as client:
+        health = client.get("/v1/health").json()
+
+    assert set(health) == {"ok", "apiVersion", "schemaVersions", "registryVersion", "device"}
+    assert set(health["device"]) == {
+        "kind", "profile", "vramBudgetMb", "vramFreeMb", "ramFreeMb"
+    }
+    assert set(health["schemaVersions"]) == {"min", "max"}
+
+
 def test_health_and_models() -> None:
     with _client() as client:
         health = client.get("/v1/health").json()

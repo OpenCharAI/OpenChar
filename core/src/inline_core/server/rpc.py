@@ -36,6 +36,10 @@ class RpcRouter:
     def has(self, channel: str) -> bool:
         return channel in self._handlers
 
+    def channels(self) -> list[str]:
+        """Every registered channel, sorted. Read by the /api reference and by extension unload."""
+        return sorted(self._handlers)
+
     async def dispatch(self, channel: str, args: list[Any]) -> dict[str, Any]:
         handler = self._handlers.get(channel)
         if handler is None:

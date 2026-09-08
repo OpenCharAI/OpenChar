@@ -38,6 +38,9 @@ export default defineConfig({
       '/download': CORE,
       '/v1': CORE,
       '/studio': CORE,
+      // The API reference and the schema it fetches, so /api works from the dev server too.
+      '/api': CORE,
+      '/openapi.json': CORE,
       '/events': { target: CORE_WS, ws: true },
     },
   },

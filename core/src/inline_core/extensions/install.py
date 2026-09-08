@@ -573,7 +573,7 @@ class Installer:
                 self._registry.unregister(descriptor.type)
                 self._requirements.unregister(descriptor.type)
         if self._rpc is not None:
-            for channel in list(getattr(self._rpc, "_handlers", {})):
+            for channel in self._rpc.channels():
                 if channel.startswith(f"ext:{extension_id}:"):
                     self._rpc.unregister(channel)
 

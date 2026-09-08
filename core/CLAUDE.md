@@ -352,6 +352,8 @@ uv run pytest -q                          # tests (no GPU; model code is import-
 - **New low-level primitive** → descriptor in `graph/primitives.py`; its runner lands with the C2 work
   (build a component in `components/`, wire it through `encode`/`sample`/`vae` and the sampler seam).
 - **New `/v1` route** → add it in `server/app.py`, shape the JSON in `server/serialize.py`, keep errors
-  as `{error:{code,message}}` with the right status. Update the API list in `README.md`.
+  as `{error:{code,message}}` with the right status. Declare its shape in `server/schemas.py` and tag
+  it in `server/docs.py`, or `/api` documents it as returning "any JSON". Update the API list in
+  `README.md`.
 - **New port/handle type** → `PortKind` in `graph/schema.py` (+ `port_satisfies` if it has coercions).
 - **New device/memory behaviour** → behind `DevicePolicy` in `device/`; never in a component.

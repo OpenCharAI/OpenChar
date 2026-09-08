@@ -53,6 +53,17 @@ jobs:
           python -m pip install --upgrade build
           python -m build core --outdir dist
 
+      - name: The API reference bundle must be in the wheel
+        run: |
+          python - <<'CHECK'
+          import glob, zipfile
+          wheel = glob.glob("dist/openchar_core-*.whl")[0]
+          member = "inline_core/server/vendor/scalar.standalone.js"
+          names = zipfile.ZipFile(wheel).namelist()
+          assert member in names, f"{member} missing: GET /api would serve a blank page"
+          print(f"{member} is present in {wheel}")
+          CHECK
+
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:

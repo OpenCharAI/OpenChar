@@ -16,10 +16,11 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import unquote
 
-from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Query, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from .. import __version__
 from ..config import models_dirs
 from ..device.memory import MemoryPolicy
 from ..device.policy import DevicePolicy
@@ -33,9 +34,23 @@ from ..runtime.file_store import FileTakeStore
 from ..studio import recipe as studio_recipe
 from ..studio.system_stats import SystemStats
 from .assets import AssetStore
+from .docs import binary_body, file_responses, install_openapi, json_body
 from .manager import RunConflict, RunManager
+from .reference import mount_reference
 from .rpc import EventBroadcaster, RpcRouter
 from .run_store import RunStore
+from .schemas import (
+    AssetStoredOut,
+    DescriptorOut,
+    ErrorOut,
+    HealthOut,
+    ModelsOut,
+    RpcResultOut,
+    RunAcceptedOut,
+    RunListOut,
+    RunStateOut,
+    TakeOut,
+)
 from .serialize import (
     descriptor_json,
     event_json,
@@ -199,9 +214,24 @@ def create_app(
             stats.stop()
         manager.shutdown()
 
-    app = FastAPI(title="Inline Core", version="0.0.0", lifespan=lifespan)
+    app = FastAPI(
+        title="OpenChar Studio APIs",
+        version=__version__,
+        summary=(
+            "The generation engine behind OpenChar Studio: "
+            "typed node graphs in, immutable takes out."
+        ),
+        lifespan=lifespan,
+    )
 
-    @app.get("/v1/health")
+    # Serialised through the model because it returns a bare dict, so a field HealthOut omits is
+    # dropped from the response.
+    @app.get(
+        "/v1/health",
+        tags=["Engine"],
+        summary="Health",
+        response_model=HealthOut,
+    )
     async def health() -> dict[str, Any]:
         placement = policy.placement("denoiser")
         return {
@@ -218,7 +248,13 @@ def create_app(
             },
         }
 
-    @app.get("/v1/models")
+    @app.get(
+        "/v1/models",
+        tags=["Nodes"],
+        summary="List nodes",
+        response_model=ModelsOut,
+        responses={304: {"description": "The registry has not changed since your ETag."}},
+    )
     async def list_models(request: Request) -> Response:
         version = _version(registry, catalog)
         etag = f'"{version}"'
@@ -230,14 +266,32 @@ def create_app(
         }
         return JSONResponse(body, headers={"ETag": etag})
 
-    @app.get("/v1/models/{model_type:path}")
+    @app.get(
+        "/v1/models/{model_type:path}",
+        tags=["Nodes"],
+        summary="Get node",
+        response_model=DescriptorOut,
+        responses={404: {"model": ErrorOut, "description": "No node of that type."}},
+    )
     async def get_model(model_type: str) -> Response:
         try:
             return JSONResponse(descriptor_json(registry.get(model_type), catalog, reqs))
         except UnknownNodeType as error:
             return _error("not_found", str(error), 404)
 
-    @app.post("/v1/runs")
+    @app.post(
+        "/v1/runs",
+        tags=["Runs"],
+        summary="Create run",
+        status_code=201,
+        response_model=RunAcceptedOut,
+        responses={
+            200: {"model": RunAcceptedOut, "description": "Replay of a known clientRunId."},
+            409: {"model": ErrorOut, "description": "clientRunId reused with a different graph."},
+            422: {"model": ErrorOut, "description": "Graph failed type-checking, or no target."},
+        },
+        openapi_extra={"requestBody": json_body("SubmitRunIn")},
+    )
     async def submit_run(request: Request) -> Response:
         body = await request.json()
         target = body.get("target")
@@ -261,7 +315,12 @@ def create_app(
             status_code=201 if created else 200,
         )
 
-    @app.get("/v1/runs")
+    @app.get(
+        "/v1/runs",
+        tags=["Runs"],
+        summary="List runs",
+        response_model=RunListOut,
+    )
     async def list_runs() -> Response:
         runs = [
             run_summary_json(r.state, manager.queue_position(r.state.run_id))
@@ -270,33 +329,66 @@ def create_app(
         ]
         return JSONResponse({"runs": runs})
 
-    @app.get("/v1/runs/{run_id}")
+    @app.get(
+        "/v1/runs/{run_id}",
+        tags=["Runs"],
+        summary="Get run",
+        response_model=RunStateOut,
+        responses={404: {"model": ErrorOut, "description": "No run with that id."}},
+    )
     async def get_run(run_id: str) -> Response:
         record = manager.get(run_id)
         if record is None:
             return _error("not_found", f"No run {run_id!r}.", 404)
         return JSONResponse(run_json(record.state))
 
-    @app.delete("/v1/runs/{run_id}")
+    @app.delete(
+        "/v1/runs/{run_id}",
+        tags=["Runs"],
+        summary="Cancel run",
+        response_model=RunAcceptedOut,
+        responses={404: {"model": ErrorOut, "description": "No run with that id."}},
+    )
     async def cancel_run(run_id: str) -> Response:
         if not manager.cancel(run_id):
             return _error("not_found", f"No run {run_id!r}.", 404)
         return JSONResponse({"runId": run_id, "status": "cancelled"})
 
-    @app.post("/v1/assets")
+    @app.post(
+        "/v1/assets",
+        tags=["Assets"],
+        summary="Create asset",
+        response_model=AssetStoredOut,
+        openapi_extra={"requestBody": binary_body()},
+    )
     async def upload_asset(request: Request) -> Response:
         data = await request.body()
         stored = assets.put(data, request.headers.get("content-type"))
         return JSONResponse({"id": stored.id, "kind": stored.kind.value, "bytes": stored.size})
 
-    @app.get("/v1/takes/{take_id}")
+    @app.get(
+        "/v1/takes/{take_id}",
+        tags=["Takes"],
+        summary="Get take",
+        response_model=TakeOut,
+        responses={404: {"model": ErrorOut, "description": "No take with that id."}},
+    )
     async def get_take(take_id: str) -> Response:
         take = manager.find_take(take_id)
         if take is None:
             return _error("not_found", f"No take {take_id!r}.", 404)
         return JSONResponse(take_json(take))
 
-    @app.get("/v1/takes/{take_id}/bytes")
+    @app.get(
+        "/v1/takes/{take_id}/bytes",
+        tags=["Takes"],
+        summary="Get take bytes",
+        response_class=FileResponse,
+        responses={
+            **file_responses(),
+            404: {"model": ErrorOut, "description": "No take, or its bytes are gone."},
+        },
+    )
     async def get_take_bytes(take_id: str) -> Response:
         take = manager.find_take(take_id)
         if take is None:
@@ -331,7 +423,13 @@ def create_app(
 
     # The Studio app-backend bridge (strangler-fig): the SPA posts InlineStudioApi calls here.
     # Native handlers answer ported channels; the rest proxy to the legacy Node backend (rpc.py).
-    @app.post("/rpc")
+    @app.post(
+        "/rpc",
+        tags=["Studio RPC"],
+        summary="Call a channel",
+        response_model=RpcResultOut,
+        openapi_extra={"requestBody": json_body("RpcCallIn")},
+    )
     async def rpc_dispatch(request: Request) -> Response:
         body = await request.json()
         channel = body.get("channel")
@@ -549,7 +647,13 @@ def create_app(
             ),
         )
 
-        @app.get("/download/snapshot/{run_id}/{step}")
+        @app.get(
+            "/download/snapshot/{run_id}/{step}",
+            tags=["Media & downloads"],
+            summary="Download snapshot",
+            response_class=FileResponse,
+            responses=file_responses(),
+        )
         async def download_snapshot(run_id: str, step: int) -> Response:
             # A mid-run LoRA lives in the project's working dir, which /media does not surface and
             # no model picker scans, so a download is the only way to get one out of the browser.
@@ -566,7 +670,13 @@ def create_app(
                 target, filename=target.name, media_type="application/octet-stream"
             )
 
-        @app.get("/media/{media_path:path}")
+        @app.get(
+            "/media/{media_path:path}",
+            tags=["Media & downloads"],
+            summary="Get project file",
+            response_class=FileResponse,
+            responses=file_responses("*/*"),
+        )
         async def media(media_path: str, request: Request) -> Response:
             try:
                 root = studio_store.folder().resolve()
@@ -589,7 +699,13 @@ def create_app(
                 return Response("Not found", status_code=404)
             return FileResponse(target)  # Range-aware; Content-Type guessed from the extension
 
-        @app.get("/download/lora/{run_id}")
+        @app.get(
+            "/download/lora/{run_id}",
+            tags=["Media & downloads"],
+            summary="Download LoRA",
+            response_class=FileResponse,
+            responses=file_responses(),
+        )
         async def download_lora(run_id: str) -> Response:
             # Stream a finished run's LoRA as an attachment. The browser has no filesystem, so
             # "copy the path" is useless there - a download is the only way to get the file out.
@@ -613,7 +729,13 @@ def create_app(
                 target, filename=target.name, media_type="application/octet-stream"
             )
 
-        @app.get("/download/character/{name}")
+        @app.get(
+            "/download/character/{name}",
+            tags=["Media & downloads"],
+            summary="Download character",
+            response_class=FileResponse,
+            responses=file_responses(),
+        )
         async def download_character(name: str) -> Response:
             # A character lives in the models root, which /media does not serve, so exporting one
             # out of the browser needs its own route.
@@ -626,7 +748,13 @@ def create_app(
                 target, filename=target.name, media_type="application/octet-stream"
             )
 
-        @app.get("/character-ref/{name}/{index}")
+        @app.get(
+            "/character-ref/{name}/{index}",
+            tags=["Media & downloads"],
+            summary="Get character reference",
+            response_class=FileResponse,
+            responses=file_responses("image/png"),
+        )
         async def character_ref(name: str, index: int) -> Response:
             """One reference image out of a `.char`, so the library can render without the browser
             having to unzip a multi-megabyte archive."""
@@ -648,31 +776,47 @@ def create_app(
                 return Response("Not found", status_code=404)
             return Response(data, media_type="image/png")
 
-        @app.post("/upload/character")
-        async def upload_character(request: Request) -> Response:
+        @app.post(
+            "/upload/character",
+            tags=["Assets"],
+            summary="Upload character",
+            response_model=RpcResultOut,
+            openapi_extra={"requestBody": binary_body()},
+        )
+        async def upload_character(request: Request, name: str | None = None) -> Response:
             # /upload routes everything through assets.import_file, which returns None for an
             # unknown extension - a .char posted there is silently dropped. Hence its own route.
             from ..characters import library as char_library
 
-            name = basename(request.query_params.get("name") or "character.char")
+            filename = basename(name or "character.char")
             try:
-                landed = char_library.import_bytes(await request.body(), name)
+                landed = char_library.import_bytes(await request.body(), filename)
                 catalog.rescan()
                 events.broadcast("events:charactersChanged", {})
                 return JSONResponse({"ok": True, "value": {"file": landed.name}})
             except Exception as error:  # noqa: BLE001 - Result envelope, errors never cross raw
                 return JSONResponse({"ok": False, "error": str(error)})
 
-        @app.post("/upload")
-        async def upload(request: Request) -> Response:
+        @app.post(
+            "/upload",
+            tags=["Assets"],
+            summary="Upload to library",
+            response_model=RpcResultOut,
+            openapi_extra={"requestBody": binary_body()},
+        )
+        async def upload(
+            request: Request,
+            name: str | None = None,
+            folder_id: str | None = Query(default=None, alias="folderId"),
+        ) -> Response:
             from ..studio import assets as ax
 
-            name = basename(request.query_params.get("name") or "upload") or "upload"
-            folder_id = request.query_params.get("folderId") or None
+            filename = basename(name or "upload") or "upload"
+            folder_id = folder_id or None
             body = await request.body()
             try:
                 with tempfile.TemporaryDirectory() as tmp:
-                    path = Path(tmp) / name
+                    path = Path(tmp) / filename
                     path.write_bytes(body)
                     asset = ax.import_file(
                         studio_store.conn(), studio_store.folder(), str(path), folder_id
@@ -682,6 +826,9 @@ def create_app(
                 return JSONResponse({"ok": True, "value": asset})
             except Exception as error:  # noqa: BLE001
                 return JSONResponse({"ok": False, "error": str(error)})
+
+    install_openapi(app, rpc=rpc)
+    mount_reference(app)
 
     # Serve the Inline Studio SPA on this same port when a frontend is available. Mounted LAST so
     # every /v1 and /rpc route above still wins; StaticFiles(html=True) serves index.html at "/" and

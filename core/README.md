@@ -212,6 +212,10 @@ Working data (the run database and takes) lives in `INLINE_DATA_DIR` (default `.
 
 ## API (v1)
 
+The full interactive reference is at **`/api`** on a running server (<http://127.0.0.1:8848/api>),
+covering `/v1`, the Studio `/rpc` channels and both websocket streams. The summary below is the
+`/v1` half only.
+
 - `POST /v1/runs {graph, target}` returns `{runId}` (validated up front; 422 on a bad graph)
 - `GET /v1/runs/{id}` returns run state (durable; survives a restart)
 - `GET /v1/runs/{id}/events` (websocket): a snapshot, then `progress` / `node_done` / `run_done`

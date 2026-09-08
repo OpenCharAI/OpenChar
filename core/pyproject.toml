@@ -59,6 +59,8 @@ runtime = [
 server = [
   "fastapi>=0.110",
   "uvicorn[standard]>=0.29",
+  # GET /api; capped because the page is built from a keyword surface a major could rename.
+  "scalar-fastapi>=1.9,<2",
   # Bundled ffmpeg for the timeline render and audio waveform peaks (ffprobe is not bundled).
   "imageio-ffmpeg>=0.4",
 ]
@@ -114,6 +116,7 @@ all = [
   # server
   "fastapi>=0.110",
   "uvicorn[standard]>=0.29",
+  "scalar-fastapi>=1.9,<2",
   "imageio-ffmpeg>=0.4",
   # training (the Trainer tab)
   "peft>=0.11",
@@ -152,6 +155,8 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/inline_core"]
+# GET /api serves these from the installed package; a wheel without them 404s its own script tag.
+artifacts = ["src/inline_core/server/vendor/*"]
 
 [tool.ruff]
 line-length = 100
