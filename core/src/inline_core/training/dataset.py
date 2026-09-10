@@ -151,6 +151,30 @@ def _to_tensor(image: Any, resolution: int, flip: bool = False) -> Any:
     return torch.from_numpy(arr).permute(2, 0, 1)  # CHW
 
 
+def check_usable(dataset_dir: str, arch: str) -> None:
+    """Fail before the encoders load when the dataset holds nothing this arch can train on.
+
+    Worth its own pass because the alternative is a ten-gigabyte text encoder loading first and the
+    run then reporting an empty dataset - true, but not the reason, and not what to do about it.
+    """
+    from . import arch as archs
+
+    root = Path(dataset_dir)
+    if not root.is_dir():
+        raise RuntimeError(f"The dataset folder {dataset_dir} does not exist.")
+    images = len(_pairs(root, _IMAGE_SUFFIXES))
+    clips = len(_pairs(root, _VIDEO_SUFFIXES))
+    if images or (clips and archs.get(arch).clip is not None):
+        return
+    if clips:
+        raise RuntimeError(
+            f"This dataset holds {clips} video clip{'s' if clips != 1 else ''} and no images, but "
+            f"{arch} trains on still images. Train it on a dataset of images, or pick MiniMax H3 "
+            "or LTX-2.5, which train on clips."
+        )
+    raise RuntimeError(f"The dataset at {dataset_dir} has no images or clips in it.")
+
+
 def precache(
     dataset_dir: str,
     components: Any,

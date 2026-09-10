@@ -117,6 +117,8 @@ def _encode(
         )
         return items, unconditional, _VIDEO_SHIFTS[archs.LTX25]
 
+    # Before the encoders, not after: this is the cheap check and they are the expensive load.
+    ds.check_usable(dataset_dir, arch)
     encoders = models.load_encoders(models_dir, arch, device, dtype, base_mode)
     items = ds.precache(dataset_dir, encoders, arch, device, dtype, resolution, flip=flip)
     unconditional = ds.precache_empty(encoders, arch, device) if dropout > 0 else None

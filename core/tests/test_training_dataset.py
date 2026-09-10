@@ -139,3 +139,30 @@ def test_an_unpaired_item_is_a_clip_item_not_an_error(tmp_path) -> None:
     triples = media_triples(tmp_path)
     assert len(triples) == 1
     assert triples[0].reference is None
+
+
+def test_a_clip_dataset_on_a_stills_arch_says_so_before_the_encoders_load(tmp_path) -> None:
+    """The real report this came from: a 173-clip H3 dataset trained as FLUX.1 reported only "The
+    exported dataset is empty" - true, but not the reason, and only after a 10GB encoder had
+    loaded. The check names what is there and what will train it."""
+    from inline_core.training import dataset as ds
+
+    for i in range(3):
+        (tmp_path / f"{i:04d}.mp4").write_bytes(b"")
+
+    with pytest.raises(RuntimeError, match="3 video clips and no images"):
+        ds.check_usable(str(tmp_path), "flux1")
+    # The video archs take the same folder without complaint.
+    ds.check_usable(str(tmp_path), "minimax-h3")
+    ds.check_usable(str(tmp_path), "ltx-2-5")
+
+    # One image alongside is enough for a stills arch; the clips are simply skipped.
+    (tmp_path / "0000.png").write_bytes(b"")
+    ds.check_usable(str(tmp_path), "flux1")
+
+
+def test_an_empty_dataset_folder_is_named(tmp_path) -> None:
+    from inline_core.training import dataset as ds
+
+    with pytest.raises(RuntimeError, match="no images or clips"):
+        ds.check_usable(str(tmp_path), "flux1")
