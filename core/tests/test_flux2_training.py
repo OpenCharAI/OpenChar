@@ -14,7 +14,7 @@ import pytest
 
 from inline_core.training import arch as archs
 from tests.test_flux2_resolve import _write_header_only
-from tests.test_flux2_variants import KLEIN_4B, _shapes
+from tests.test_flux2_variants import KLEIN_4B, KLEIN_9B, _shapes
 
 models = pytest.importorskip("inline_core.training.models")
 
@@ -197,3 +197,78 @@ def test_a_lora_adapter_attaches_to_every_target_and_receives_gradient() -> None
     # Both block types must learn: the single blocks hold most of FLUX.2's parameters.
     assert any("transformer_blocks." in n and "single" not in n for n in got_grad)
     assert any("single_transformer_blocks." in n for n in got_grad)
+
+
+def _installed(root: Path, *files: tuple[str, dict]) -> None:
+    """Write header-only checkpoints into ``diffusion_models/``."""
+    for name, config in files:
+        _write_header_only(root / "diffusion_models" / name, _shapes(config))
+
+
+@pytest.fixture
+def models_root(tmp_path: Path, monkeypatch) -> Path:
+    root = tmp_path / "models"
+    (root / "diffusion_models").mkdir(parents=True)
+    monkeypatch.setenv("INLINE_MODELS_DIR", str(root))
+    from inline_core.models.flux2 import requirements as reqs
+
+    reqs._IDENTIFIED.clear()  # keyed by path, and tmp_path is reused across tests
+    return root
+
+
+def test_the_base_mode_picks_the_size_not_only_the_undistilled_build(models_root: Path) -> None:
+    # Both bases installed at once: sorted order alone would always hand back 4B, because
+    # "flux-2-klein-base-4b" sorts before "flux-2-klein-base-9b".
+    _installed(
+        models_root,
+        ("flux-2-klein-base-4b.safetensors", KLEIN_4B),
+        ("flux-2-klein-base-9b.safetensors", KLEIN_9B),
+    )
+    assert models._base_file(models_root, "flux2", "raw").endswith("base-4b.safetensors")
+    assert models._base_file(models_root, "flux2", "raw_9b").endswith("base-9b.safetensors")
+
+
+def test_the_encoder_bundle_follows_the_base_rather_than_a_second_scan(models_root: Path) -> None:
+    """The bug this guards: the base file was the first *undistilled* checkpoint while the loader
+    arch came from a separate scan for the first FLUX.2 checkpoint at all. A distilled klein 4B
+    kept for generation sorts first, so a 9B run paired a 9B transformer with a 4B text encoder."""
+    _installed(
+        models_root,
+        ("flux-2-klein-4b.safetensors", KLEIN_4B),  # distilled, sorts first, generation-only
+        ("flux-2-klein-base-9b.safetensors", KLEIN_9B),
+    )
+    assert models._base_file(models_root, "flux2", "raw_9b").endswith("base-9b.safetensors")
+    assert models.loader_arch("flux2", str(models_root), "raw_9b") == "flux2-klein-9b"
+    assert models.flux2_variant(models_root, "raw_9b").key == "klein-9b-base"
+
+
+def test_a_9b_run_is_sized_against_its_own_row(models_root: Path) -> None:
+    """The sizing is keyed per variant rather than per arch, so a 9B run cannot read 4B's number.
+
+    Only the routing is asserted, not which row is larger: measured on an L40S the two slopes are
+    0.43 and 0.55 MB per token, so the rows are close, and 4B's constant sits well above its own
+    measurement. A magnitude comparison would be pinning that padding, not the behaviour."""
+    _installed(models_root, ("flux-2-klein-base-9b.safetensors", KLEIN_9B))
+    assert models._activation_key("flux2", str(models_root), "raw_9b") == "flux2-klein-9b"
+    assert models._activation_key("flux2", str(models_root), "raw") != "flux2-klein-9b"
+    # Both rows exist, so neither run silently falls through to the Krea 2 default.
+    assert {"flux2-klein-4b", "flux2-klein-9b"} <= set(models._ACTIVATION_MB_PER_TOKEN)
+
+
+def test_asking_for_a_base_that_is_not_installed_names_what_is(models_root: Path) -> None:
+    _installed(models_root, ("flux-2-klein-base-4b.safetensors", KLEIN_4B))
+    with pytest.raises(RuntimeError, match="Klein 4B Base"):
+        models._base_file(models_root, "flux2", "raw_9b")
+
+
+def test_the_9b_base_and_its_own_encoder_are_both_required(models_root: Path) -> None:
+    from inline_core.models import trainingreqs
+
+    ids = [c.id for c in trainingreqs.base_components("flux2", "raw_9b")]
+    assert "diffusion_klein_9b_base" in ids
+    # The required `text_encoder` row points at the 4B encoder whatever the base, so 9B swaps it.
+    assert "text_encoder_qwen3_8b" in ids
+    assert "text_encoder" not in ids and "diffusion" not in ids
+
+    four = [c.id for c in trainingreqs.base_components("flux2", "raw")]
+    assert "diffusion_klein_4b_base" in four and "text_encoder" in four

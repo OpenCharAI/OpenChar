@@ -29,6 +29,7 @@ export interface ClipGrid {
 export const CLIP_GRIDS: Record<TrainingArch, ClipGrid | null> = {
   'z-image': null,
   krea2: null,
+  flux1: null,
   flux2: null,
   'minimax-h3': { fps: 24, grid: 17, offset: 5 },
   'ltx-2-5': { fps: 24, grid: 8, offset: 1 },

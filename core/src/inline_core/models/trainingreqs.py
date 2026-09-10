@@ -26,6 +26,19 @@ def _hyperparams(params: dict[str, Any] | None) -> dict[str, Any]:
     return raw if isinstance(raw, dict) else {}
 
 
+#: FLUX.2 base mode -> (variant, the optional rows a training run promotes, the required rows they
+#: stand in for). Mirrors ``training/models._FLUX2_BASES``; ``raw`` stays 4B so saved runs resolve
+#: to the checkpoint they were trained against.
+_FLUX2_TRAINING_BASES: dict[str, tuple[str, tuple[str, ...], tuple[str, ...]]] = {
+    "raw": ("klein-4b-base", ("diffusion_klein_4b_base",), ("diffusion",)),
+    "raw_9b": (
+        "klein-9b-base",
+        ("diffusion_klein_9b_base", "text_encoder_qwen3_8b"),
+        ("diffusion", "text_encoder"),
+    ),
+}
+
+
 def base_components(arch: str, base_mode: str) -> list[ModelComponent]:
     """The required components for one architecture's training base, newest-arch-first by name."""
     if arch == "krea2":
@@ -38,15 +51,27 @@ def base_components(arch: str, base_mode: str) -> list[ModelComponent]:
         from .zimage import requirements as reqs
 
         return _required(reqs.zimage_requirements()) + _adapter(arch, base_mode)
+    if arch == "flux1":
+        from .flux1 import requirements as reqs
+
+        # No row swap, unlike FLUX.2 below: dev is guidance-distilled rather than step-distilled, so
+        # the checkpoint the popup already lists as required *is* the training base.
+        return _required(reqs.flux1_requirements())
     if arch == "flux2":
         from .flux2 import requirements as reqs
 
         # The distilled build is what the generation node wants and what the trainer refuses, so
-        # the Base checkpoint FLUX.2 lists as an optional extra is the required one here.
-        rows = reqs.flux2_requirements()
-        base = next((c for c in rows if c.id == "diffusion_klein_4b_base"), None)
-        keep = [c for c in _required(rows) if c.id != "diffusion"]
-        return ([replace(base, optional=False)] if base else _required(rows)) + keep
+        # the Base checkpoint the popup lists as an optional extra is the required one here. 9B
+        # brings its own encoder: the required row points at the 4B one whatever the base.
+        variant, promote, replaced = _FLUX2_TRAINING_BASES.get(
+            base_mode, _FLUX2_TRAINING_BASES["raw"]
+        )
+        rows = reqs.flux2_requirements({"variant": variant})
+        by_id = {c.id: c for c in rows}
+        promoted = [replace(by_id[row], optional=False) for row in promote if row in by_id]
+        if not promoted:
+            return _required(rows)
+        return promoted + [c for c in _required(rows) if c.id not in replaced]
     if arch == "ltx-2-5":
         from .ltx25 import requirements as reqs
 

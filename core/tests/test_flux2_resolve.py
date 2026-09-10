@@ -104,6 +104,41 @@ def test_a_vision_language_encoder_is_never_picked(models: Path) -> None:
     assert reqs.resolve_text_encoder() == good
 
 
+def test_flux1_encoders_are_never_offered_to_flux2(models: Path) -> None:
+    """The bug this guards: T5-XXL's ``encoder.embed_tokens.weight`` is 32128 x 4096, and 4096 is
+    exactly the width klein 9B matches on - so FLUX.1's sequence encoder, dropped in the same
+    folder, was offered to klein 9B as its Qwen3-8B. CLIP-L is ruled out the same way."""
+    # Both named to sort first, so a width-only match would reach them before the real encoder.
+    t5 = models / "text_encoders" / "aaa_t5xxl_fp16.safetensors"
+    _write_header_only(
+        t5,
+        {
+            "shared.weight": [32128, 4096],
+            "encoder.embed_tokens.weight": [32128, 4096],
+            "encoder.block.0.layer.0.SelfAttention.q.weight": [4096, 4096],
+        },
+    )
+    assert reqs._encoder_width(t5) is None
+
+    clip = models / "text_encoders" / "aab_clip_l.safetensors"
+    _write_header_only(
+        clip,
+        {
+            "text_model.embeddings.token_embedding.weight": [49408, 768],
+            "text_model.encoder.layers.0.self_attn.q_proj.weight": [768, 768],
+        },
+    )
+    assert reqs._encoder_width(clip) is None
+
+    _write_header_only(
+        models / "diffusion_models" / "flux-2-klein-9b.safetensors", _shapes(KLEIN_9B)
+    )
+    assert reqs.resolve_text_encoder() is None, "FLUX.1's encoders are not klein 9B's"
+
+    good = _encoder(models / "text_encoders" / "qwen_3_8b.safetensors", 4096)
+    assert reqs.resolve_text_encoder() == good
+
+
 def test_klein_4b_reuses_the_z_image_encoder_file(models: Path) -> None:
     # klein 4B's encoder is stock Qwen3-4B - the same file Z-Image downloads - so a user who has
     # run Z-Image already has it and must not be asked to fetch it again.
@@ -143,6 +178,7 @@ def test_popup_blocks_on_the_required_three_then_lists_the_family(models: Path) 
     assert {c.id for c in components if c.optional} == {
         "diffusion_klein_4b_base",
         "diffusion_klein_9b",
+        "diffusion_klein_9b_base",
         "text_encoder_qwen3_8b",
         "diffusion_dev",
         "text_encoder_mistral",

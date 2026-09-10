@@ -39,16 +39,29 @@ A dataset's trigger word is prepended to every caption during training, so the m
 
 ## Architecture and base model modes
 
-The Trainer's Adjust panel picks the **architecture** first (Z-Image, Krea 2, FLUX.2, MiniMax H3, or LTX-2.5), then a base within it. Training directly on a step-distilled checkpoint breaks the distillation down (turbo drift), so each architecture offers a way around that.
+The Trainer's Adjust panel picks the **architecture** first (Z-Image, Krea 2, FLUX.1, FLUX.2, MiniMax H3, or LTX-2.5), then a base within it. Training directly on a step-distilled checkpoint breaks the distillation down (turbo drift), so each architecture offers a way around that.
 
 **Krea 2** avoids the problem outright, which is why it is the recommended path:
 
 - **Krea 2 RAW** trains on the undistilled base. Nothing to fuse, nothing to drift. Put `krea2_raw_bf16.safetensors` in `models/diffusion_models/`, train, then generate with the **Krea 2 Turbo** node - the LoRA carries over unchanged.
 - **Krea 2 Turbo + training adapter** exists for people who only hold Turbo. Put [ostris/krea2_turbo_training_adapter](https://huggingface.co/ostris/krea2_turbo_training_adapter) in `models/loras/`, or point `INLINE_KREA2_TRAIN_ADAPTER` at it.
 
-**FLUX.2** works like Krea 2, with no adapter to download:
+**FLUX.2** works like Krea 2, with no adapter to download. Both bases are undistilled builds, and the trainer refuses a distilled checkpoint rather than letting a run produce a bad adapter hours later:
 
-- **FLUX.2 Base** is the only option, and the trainer refuses a distilled checkpoint rather than letting a run produce a bad adapter hours later. Put `flux-2-klein-base-4b.safetensors` in `models/diffusion_models/`, train, then generate with the distilled **klein 4B** checkpoint. The LoRA carries over unchanged.
+- **klein Base 4B** is the recommended path and the default. Apache-2.0 and ungated. Put `flux-2-klein-base-4b.safetensors` in `models/diffusion_models/`, train, then generate with the distilled **klein 4B** checkpoint. The LoRA carries over unchanged.
+- **klein Base 9B** is the larger tier, and wants about 22GB of VRAM and 64GB of system RAM. Put `flux-2-klein-base-9b.safetensors` in `models/diffusion_models/` alongside the **Qwen3-8B** text encoder in `models/text_encoders/` - 9B does not use the 4B encoder, and the model popup fetches the right one once the Base setting is on 9B. Unlike the 4B line this checkpoint is gated and non-commercial, so you accept BFL's licence on Hugging Face first.
+
+Both bases can sit in `models/diffusion_models/` at once; the **Base** setting picks which one a run trains, rather than whichever sorts first.
+
+**FLUX.1** trains on **dev**, and needs no adapter either - but for a different reason to FLUX.2:
+
+- **dev is guidance-distilled, not step-distilled.** A LoRA trains _through_ guidance distillation by pinning the guidance embedding to 1 for every step, which is what every reference trainer does. There is nothing to de-distill, so there is no adapter and no base/turbo choice.
+- **It conditions on two text encoders** and needs both: T5-XXL for the sequence, CLIP-L for the pooled vector. Put `flux1-dev.safetensors` in `models/diffusion_models/`, `t5xxl_fp16.safetensors` and `clip_l.safetensors` in `models/text_encoders/`, and `ae.safetensors` in `models/vae/` - that VAE is the file Z-Image already uses, so an existing install has it.
+- **schnell is refused**, and by content rather than by name: it is the one FLUX.1 build with no guidance embedder at all, so the Trainer spots it whatever the file is called. It is step-distilled and collapses the way a distilled FLUX.2 does.
+- **The Fill, Canny and Depth builds are refused too.** They take a mask or a stacked hint in extra input channels that a plain image dataset cannot fill, and the mismatch would otherwise surface as a shape error some way into the run. Kontext is left out for a different reason: it would train, but it learns an _edit_ between a pair of images, and a dataset of single images teaches it nothing it is used for.
+- **A 24GB bf16 base beside a 10GB T5 encoder**, so most cards train it in 4-bit. Base precision on Auto picks that for you. The two encoders are loaded, used to cache latents and captions, then freed before the transformer loads, so the peak is one half or the other rather than the sum.
+- **4-bit takes it from a 24GB card to a 12GB one, for about 10 percent a step.** Measured on an L40S: 24.9GB at 512 and 26.5GB at 1024 in bf16, against 10.4GB and 11.6GB in 4-bit, at 0.82s and 2.23s a step against bf16's 0.66s and 2.08s. A 500-step run at 512 is about six minutes.
+- **dev's weights are non-commercial**, whichever mirror they come from, and a LoRA trained on them is a derivative that inherits it. The model popup says so on the row.
 
 **MiniMax H3** is the video model, and it trains on **still images**:
 
@@ -204,11 +217,19 @@ well as its own `0001.ref.mp4`, so a downloaded set can be trained on directly.
 | FLUX.2     | Base (klein 4B) | 512  | **4-bit**      | 8.6GB         | not measured  |
 | FLUX.2     | Base (klein 4B) | 1024 | bf16           | 9.9GB         | not measured  |
 | FLUX.2     | Base (klein 4B) | 1024 | **4-bit**      | 9.9GB         | not measured  |
+| FLUX.2     | Base (klein 9B) | 512  | bf16           | 19.2GB        | not measured  |
+| FLUX.2     | Base (klein 9B) | 512  | **4-bit**      | **15.7GB**    | not measured  |
+| FLUX.2     | Base (klein 9B) | 1024 | bf16           | 20.8GB        | not measured  |
+| FLUX.2     | Base (klein 9B) | 1024 | **4-bit**      | **16.9GB**    | not measured  |
 | MiniMax H3 | FL2VA           | 512  | **4-bit**      | **20.6GB**    | **12.7GB**    |
 | MiniMax H3 | FL2VA           | 768  | **4-bit**      | **20.6GB**    | not measured  |
 | MiniMax H3 | FL2VA           | 1024 | **4-bit**      | **20.6GB**    | not measured  |
 | MiniMax H3 | FL2VA, clips    | 512  | **4-bit**      | **20.4GB**    | not measured  |
 | LTX-2.5    | dev, clips      | 512  | bf16           | **42.0GB**    | not supported |
+| FLUX.1     | dev             | 512  | bf16           | 24.9GB        | not measured  |
+| FLUX.1     | dev             | 512  | **4-bit**      | **10.4GB**    | not measured  |
+| FLUX.1     | dev             | 1024 | bf16           | 26.5GB        | not measured  |
+| FLUX.1     | dev             | 1024 | **4-bit**      | **11.6GB**    | not measured  |
 
 **H3 peaks lower on a 16GB card than it does on a 48GB one.** The run has three phases that never overlap, and on a big card the tallest is the caption pass:
 
@@ -257,16 +278,25 @@ against the same 13. Precache is keyed and reused, so a second run over the same
 dataset, resolution and clip length skips most of it. Prefer long runs, and expect a short one to be
 dominated by setup.
 
-**FLUX.2 is the cheapest of the three to train, and 4-bit does nothing for it.** Both precisions peak at the same number, because klein's base is 7.4GB against a 7.5GB Qwen3-4B text encoder, so the caption and latent caching pass at the start of the run costs more than the training does. Dropping the frozen base to 4-bit shrinks a part of the run that was never the high-water mark, and the step gets slower for nothing. Leave base precision on Auto for FLUX.2, which is what it already picks. The rows above are klein Base 4B, the only checkpoint the trainer accepts for this architecture.
+**FLUX.1's 4-bit peak depends on where the base is quantised.** bitsandbytes quantises on the move
+to CUDA, so streaming the base straight to the card materialises all 24GB of it first and the run
+peaks there whatever precision you asked for. Loading to host RAM and quantising on the way
+across drops the peak from 23.8GB to 6.2GB for the same 70 seconds, which is the difference between
+FLUX.1 needing a 24GB card and running on a 12GB one.
 
-Which card fits what (24GB and 32GB are interpolated, not measured, as are the FLUX.2 columns on 16GB: those peaks were measured on an L40S and leave room on a smaller card, but no 16GB run has been done):
+**FLUX.2 is the cheapest of the three to train, and 4-bit does nothing for it.** Both precisions peak at the same number, because klein's base is 7.4GB against a 7.5GB Qwen3-4B text encoder, so the caption and latent caching pass at the start of the run costs more than the training does. Dropping the frozen base to 4-bit shrinks a part of the run that was never the high-water mark, and the step gets slower for nothing. Leave base precision on Auto for FLUX.2, which is what it already picks.
 
-| Card | Z-Image 512 | Z-Image 1024 | Krea 2 512 | Krea 2 1024 | FLUX.2 512 | FLUX.2 1024 | MiniMax H3  | LTX-2.5 512 |
-| ---- | ----------- | ------------ | ---------- | ----------- | ---------- | ----------- | ----------- | ----------- |
-| 16GB | yes         | no           | yes, 4-bit | no          | yes        | yes         | yes, slowly | no          |
-| 24GB | yes         | yes          | yes        | no          | yes        | yes         | yes         | no          |
-| 32GB | yes         | yes          | yes        | yes, 4-bit  | yes        | yes         | yes         | no          |
-| 48GB | yes         | yes          | yes        | 4-bit only  | yes        | yes         | yes         | yes         |
+**klein Base 9B measures the same way, one tier up.** 19.2GB at 512 and 20.8GB at 1024 in bf16, against 15.7GB and 16.9GB in 4-bit, at roughly 0.53s and 1.95s a step. 4-bit drops the resident base from 18.2GB to 4.7GB but the peak only to ~16GB, because the ceiling is the Qwen3-8B caching pass rather than the transformer - the same reason 4-bit does little for 4B. So a 24GB card runs it in bf16 and 4-bit buys a card that is short of that, not a faster run. BFL's own floor is 22GB of VRAM and 64GB of system RAM, which matches.
+
+Which card fits what. The 16GB row is measured on a T4 for Z-Image, Krea 2 and MiniMax H3; **every other cell below 48GB is interpolated**, including all of FLUX.1 and FLUX.2. A peak that leaves room on a 48GB card should also fit a smaller one, but no run has been done on one.
+
+| Card | Z-Image 512 | Z-Image 1024 | Krea 2 512 | Krea 2 1024 | FLUX.1 512 | FLUX.1 1024 | FLUX.2 512 | FLUX.2 1024 | MiniMax H3  | LTX-2.5 512 |
+| ---- | ----------- | ------------ | ---------- | ----------- | ---------- | ----------- | ---------- | ----------- | ----------- | ----------- |
+| 12GB | no          | no           | no         | no          | yes, 4-bit | no          | yes        | yes         | no          | no          |
+| 16GB | yes         | no           | yes, 4-bit | no          | yes, 4-bit | yes, 4-bit  | yes        | yes         | yes, slowly | no          |
+| 24GB | yes         | yes          | yes        | no          | yes, 4-bit | yes, 4-bit  | yes        | yes         | yes         | no          |
+| 32GB | yes         | yes          | yes        | yes, 4-bit  | yes        | yes         | yes        | yes         | yes         | no          |
+| 48GB | yes         | yes          | yes        | 4-bit only  | yes        | yes         | yes        | yes         | yes         | yes         |
 
 H3 has one column because resolution barely moves it. The 16GB entry is measured on a T4 with 64GB of RAM, where the conditioner spills to the CPU: it fits in 12.7GB of VRAM but costs 16.2s a step and a 19 minute caption pass. The 24GB entry is interpolated from the 20.6GB peak, not measured on a 24GB card. A 16GB card with only 16GB of RAM is refused up front.
 
@@ -319,7 +349,7 @@ Krea 2's base is 26GB at bf16, which is what makes it expensive to fine-tune. Th
 - **Full precision (bf16)** forces the unquantized base.
 - **4-bit (NF4)** forces the quantized base.
 
-The setting appears for Krea 2 and FLUX.2, but it only pays off on Krea 2. Z-Image has no 4-bit path and does not need one: it trains in about 15GB at 1024, so bf16 already fits the cards people have. FLUX.2 has the path and gains nothing from it, because klein 4B is smaller than its own text encoder and the peak sits in the caching pass either way, so Auto leaves it at bf16. See [Benchmark results](#benchmark-results).
+The setting appears for Krea 2, FLUX.1 and FLUX.2, but it only pays off on Krea 2 and FLUX.1. Z-Image has no 4-bit path and does not need one: it trains in about 15GB at 1024, so bf16 already fits the cards people have. FLUX.2 has the path and gains nothing from it, because klein 4B is smaller than its own text encoder and the peak sits in the caching pass either way, so Auto leaves it at bf16. FLUX.1 does need it: a 24GB base is the largest here after Krea 2's, and 4-bit takes the peak from 24.9GB to 10.4GB at 512. Auto sizes the base plus its activations against your card, so anything under 32GB gets 4-bit. See [Benchmark results](#benchmark-results).
 
 To keep the peak down, the VAE and text encoder are loaded first, used to cache latents and captions, then freed before the transformer loads, so the two never stack. Which half then owns the peak depends on the model: for Z-Image and Krea 2 it is the transformer, for FLUX.2 klein it is the caching pass. If you do hit an out-of-memory error, lower the training resolution before changing anything else.
 

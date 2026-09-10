@@ -181,6 +181,33 @@ _FLUX2_DEV = ArchSpec(
     ),
 )
 
+#: FLUX.1's own repos are gated - dev *and* schnell - so the small assets come from the ungated
+#: Apache-2.0 Flex.1-alpha, which is built on FLUX.1's VAE and both of its text encoders (verified:
+#: scaling_factor 0.3611, shift_factor 0.1159, CLIPTextModel 768, T5EncoderModel d_model 4096).
+#: Freepik/flux.1-lite-8B carries the same layout if that repo ever disappears. One spec serves the
+#: whole family: dev, schnell, Kontext, Krea and the Fill/Control builds share every one of these.
+#:
+#: The transformer config is NOT fetched - it is derived from the picked checkpoint (see
+#: flux1/variants.py). Neither is the scheduler: Flex's is schnell-flavoured and would silently
+#: give dev the wrong shift, so FLUX1_SCHEDULER_CONFIG is a code constant below.
+_FLUX1 = ArchSpec(
+    key="flux1",
+    assets_repo="ostris/Flex.1-alpha",
+    asset_files=(
+        AssetFile("vae/config.json"),
+        AssetFile("text_encoder/config.json"),
+        AssetFile("text_encoder_2/config.json"),
+        # CLIP's slow tokenizer builds from vocab + merges, so no tokenizer.json is needed here.
+        AssetFile("tokenizer/vocab.json"),
+        AssetFile("tokenizer/merges.txt"),
+        AssetFile("tokenizer/tokenizer_config.json"),
+        AssetFile("tokenizer/special_tokens_map.json"),
+        AssetFile("tokenizer_2/tokenizer.json"),
+        AssetFile("tokenizer_2/tokenizer_config.json"),
+        AssetFile("tokenizer_2/special_tokens_map.json"),
+    ),
+)
+
 #: MiniMax H3's conditioner. The repo lays its encoder out under `FL2VA/text_encoder/`, so each
 #: file is re-homed to the `text_encoder/` subfolder the staged dir loads from.
 _MINIMAX_H3 = ArchSpec(
@@ -207,6 +234,7 @@ SPECS: dict[str, ArchSpec] = {
     _FLUX2_KLEIN_4B.key: _FLUX2_KLEIN_4B,
     _FLUX2_KLEIN_9B.key: _FLUX2_KLEIN_9B,
     _FLUX2_DEV.key: _FLUX2_DEV,
+    _FLUX1.key: _FLUX1,
     _MINIMAX_H3.key: _MINIMAX_H3,
 }
 
@@ -314,7 +342,7 @@ def _link_or_copy(src: Path, dst: Path) -> None:
         shutil.copy2(src, dst)
 
 
-def _staged_encoder_dir(arch: str, file: str) -> Path:
+def _staged_encoder_dir(arch: str, file: str, subfolder: str = "text_encoder") -> Path:
     """A tiny engine-owned dir transformers can load the text encoder from as a normal model: the
     bundled config next to the user's weights file linked in as ``model.safetensors``.
 
@@ -324,16 +352,26 @@ def _staged_encoder_dir(arch: str, file: str) -> Path:
     stays ≈ one tensor. Idempotent via a ``.complete`` marker; keyed by the weights path so a
     different file stages afresh."""
     root = ensure_assets(arch)
-    te_config = root / "text_encoder"
-    digest = hashlib.sha1(str(file).encode()).hexdigest()[:16]
+    te_config = root / subfolder
+    # The subfolder joins the key only when it is not the default, so an already-staged encoder is
+    # not re-staged - that fallback is a full copy of several GB where symlinks are unavailable.
+    keyed = str(file) if subfolder == "text_encoder" else f"{subfolder}\x00{file}"
+    digest = hashlib.sha1(keyed.encode()).hexdigest()[:16]
     stage = assets_root(arch) / "te_stage" / digest
     marker = stage / ".complete"
-    if marker.is_file():
+    # The marker alone is not enough: these are symlinks, and a models dir that moved leaves them
+    # dangling inside a stage that still says it is complete. `exists` follows the link.
+    weights = stage / "model.safetensors"
+    if marker.is_file() and weights.exists():
         return stage
     with _ASSETS_LOCK:
-        if marker.is_file():
+        if marker.is_file() and weights.exists():
             return stage
         stage.mkdir(parents=True, exist_ok=True)
+        # A broken link is not overwritten by _link_or_copy, which treats any entry as done.
+        for stale in stage.iterdir():
+            if stale.is_symlink() and not stale.exists():
+                stale.unlink()
         for name in ("config.json", "generation_config.json"):
             src = te_config / name
             if src.is_file():
@@ -736,6 +774,102 @@ def load_scheduler(arch: str) -> Any:
         return FlowMatchEulerDiscreteScheduler()
 
 
+# --- FLUX.1 ------------------------------------------------------------------------------------
+
+#: dev's own scheduler settings, as a code constant rather than a fetched asset: the ungated repo
+#: the rest of FLUX.1's assets come from is a schnell derivative whose scheduler does no dynamic
+#: shifting, and taking it would silently give dev the wrong shift.
+FLUX1_SCHEDULER_CONFIG = {
+    "base_image_seq_len": 256,
+    "max_image_seq_len": 4096,
+    "base_shift": 0.5,
+    "max_shift": 1.15,
+    "num_train_timesteps": 1000,
+    "shift": 3.0,
+    "use_dynamic_shifting": True,
+}
+
+
+def load_flux1_scheduler() -> Any:
+    """FLUX.1's flow-match scheduler, from the constant above (config-only - never downloads)."""
+    from diffusers import FlowMatchEulerDiscreteScheduler
+
+    return FlowMatchEulerDiscreteScheduler.from_config(FLUX1_SCHEDULER_CONFIG)
+
+
+def load_flux1_text_encoders(
+    arch: str,
+    clip_file: str,
+    t5_file: str,
+    dtype: Any,
+    quant: Quantization = Quantization.NONE,
+    device: str | None = None,
+) -> tuple[Any, Any, Any, Any]:
+    """``(clip, clip_tokenizer, t5, t5_tokenizer)`` - FLUX.1 conditions on two encoders.
+
+    Both load from a staging directory rather than a pre-loaded state dict, for the reason
+    ``_staged_encoder_dir`` gives: T5-XXL is ~10 GB and a state dict would materialize all of it in
+    host RAM. The published single files are already exactly what transformers expects - CLIP's keys
+    are all ``text_model.*``, T5's are ``shared`` plus ``encoder.block.*`` with no decoder - so
+    there is no key conversion here.
+
+    ``quant`` reaches T5 alone. CLIP-L is 246 MB, so quantizing it saves nothing measurable and only
+    risks the pooled vector the timestep embedder mixes in. Each half is cached under its own key,
+    so replacing one file does not reload the other.
+    """
+    from transformers import CLIPTokenizer, T5TokenizerFast
+
+    root = ensure_assets(arch)
+
+    def build_clip() -> Any:
+        from transformers import CLIPTextModel
+
+        return CLIPTextModel.from_pretrained(
+            str(_staged_encoder_dir(arch, clip_file)),
+            torch_dtype=dtype,
+            low_cpu_mem_usage=True,
+            device_map={"": device} if device else None,
+            local_files_only=True,
+        )
+
+    def build_t5() -> Any:
+        from transformers import T5EncoderModel
+
+        # An fp8 repack (t5xxl_fp8_e4m3fn_scaled) already is its resident size; quantizing on top
+        # is a hard error, and transformers drops its scales as unexpected keys.
+        carried = checkpoint.prequantized_kind(t5_file)
+        if carried:
+            logger.info(
+                "%s is a %s text encoder; loading it as-is rather than quantizing on top.",
+                Path(t5_file).name, carried,
+            )
+        return T5EncoderModel.from_pretrained(
+            str(_staged_encoder_dir(arch, t5_file, "text_encoder_2")),
+            torch_dtype=dtype,
+            low_cpu_mem_usage=True,
+            device_map={"": device} if device else None,
+            local_files_only=True,
+            quantization_config=_quant_config(
+                Quantization.NONE if carried else quant, framework="transformers"
+            ),
+        )
+
+    clip = _cached(
+        (arch, "clip", clip_file, _dtype_key(dtype), Quantization.NONE.value, _device_key(device)),
+        build_clip,
+    )
+    t5 = _cached(
+        (arch, "t5", t5_file, _dtype_key(dtype), quant.value, _device_key(device)), build_t5
+    )
+    # Explicit classes, not AutoTokenizer: FluxPipeline's own type hints name exactly these two.
+    return (
+        clip,
+        CLIPTokenizer.from_pretrained(str(root / "tokenizer"), local_files_only=True),
+        t5,
+        T5TokenizerFast.from_pretrained(str(root / "tokenizer_2"), local_files_only=True),
+    )
+
+
 # --- Krea 2 ------------------------------------------------------------------------------------
 
 #: The reference "single_mmdit_large_wide" geometry, shared by RAW and Turbo. These are also
@@ -1075,14 +1209,18 @@ def assemble_zimage_pipeline(
 # --- FLUX.2 --------------------------------------------------------------------------------------
 
 
-def _flux2_config_dir(arch: str, file: str, config: dict[str, Any]) -> Path:
+def _transformer_config_dir(
+    arch: str, file: str, config: dict[str, Any], class_name: str
+) -> Path:
     """A tiny staging dir holding the transformer config derived from ``file``, so diffusers'
     ``from_single_file`` has a local config to read.
 
     The config is derived from the checkpoint's own tensor shapes rather than fetched, which is what
     lets one node load klein 4B, klein 9B, dev and any later build. Keyed by the weights path, so a
     different checkpoint stages its own."""
-    digest = hashlib.sha1(f"{file}:{sorted(config.items())!r}".encode()).hexdigest()[:16]
+    digest = hashlib.sha1(
+        f"{class_name}:{file}:{sorted(config.items())!r}".encode()
+    ).hexdigest()[:16]
     stage = assets_root(arch) / "transformer_config" / digest
     marker = stage / "config.json"
     if marker.is_file():
@@ -1093,7 +1231,7 @@ def _flux2_config_dir(arch: str, file: str, config: dict[str, Any]) -> Path:
         import json
 
         stage.mkdir(parents=True, exist_ok=True)
-        payload = {"_class_name": "Flux2Transformer2DModel", **config}
+        payload = {"_class_name": class_name, **config}
         marker.write_text(json.dumps(payload, indent=2))
     return stage
 
@@ -1116,6 +1254,203 @@ def _gguf_config(dtype: Any) -> Any:
             "Reading a .gguf checkpoint needs the 'gguf' package. Install it (pip install gguf) or "
             "pick a .safetensors model in the Diffusion file dropdown."
         ) from error
+
+
+def load_flux1_transformer(
+    arch: str,
+    file: str,
+    config: dict[str, Any],
+    dtype: Any,
+    quant: Quantization = Quantization.NONE,
+    device: str | None = None,
+    loras: tuple[LoraRef, ...] = (),
+) -> Any:
+    """The FLUX.1 transformer from a single ``.safetensors``, a ``.gguf``, or a diffusers folder.
+
+    ``config`` is the geometry derived from the checkpoint (see ``flux1/variants.py``), so dev,
+    schnell, Kontext and the Fill/Control builds all load through here without a per-build config.
+    """
+
+    def build() -> Any:
+        from diffusers import FluxTransformer2DModel
+
+        if Path(file).is_dir():
+            # A folder carries its own config and, when prequantized, already-reduced shards;
+            # from_pretrained streams them rather than materializing anything at full size.
+            return FluxTransformer2DModel.from_pretrained(
+                file,
+                torch_dtype=dtype,
+                low_cpu_mem_usage=True,
+                local_files_only=True,
+                **({"device_map": {"": device}} if device else {}),
+            )
+
+        root = _transformer_config_dir(arch, file, config, "FluxTransformer2DModel")
+        kwargs: dict[str, Any] = {}
+        if _is_gguf(file):
+            kwargs["quantization_config"] = _gguf_config(dtype)
+        # NF4 loads to the CPU on purpose: bitsandbytes only quantizes on the move to CUDA, so
+        # streaming straight to the card materializes the whole bf16 base first. Measured on dev:
+        # 23.81GB peak that way against 6.23GB this way, for the same 70s.
+        load_device = None if quant is Quantization.NF4 else device
+        try:
+            model = FluxTransformer2DModel.from_single_file(
+                file,
+                config=str(root),
+                torch_dtype=dtype,
+                low_cpu_mem_usage=True,
+                device=load_device,
+                local_files_only=True,
+                **kwargs,
+            )
+        except Exception as error:
+            # Every checkpoint gets attempted - a user's own file is never refused on suspicion.
+            # Explain afterwards, because diffusers' converter fails deep inside itself without
+            # naming the file (see flux1/variants.single_file_blocker).
+            from .flux1 import variants as flux1_variants
+
+            blocked = flux1_variants.single_file_blocker(file)
+            if blocked is None:
+                raise
+            raise ComponentError(
+                f"{Path(file).name} did not load: {blocked}, and diffusers splits those as if they "
+                "were weights. A full-precision or .gguf build of the same model will work, and "
+                "OpenChar quantizes on load to fit your card either way."
+            ) from error
+        if _is_gguf(file):
+            if loras:
+                raise ComponentError(
+                    "LoRAs cannot be fused into a .gguf checkpoint. Use a .safetensors model, or "
+                    "remove the LoRA."
+                )
+            return model
+        # Fuse before quantizing: the fuse adds a full-precision delta into each weight, which a
+        # quantized weight is not a plain tensor to accept. Same ordering as the FLUX.2 path.
+        if loras:
+            from .lora import fuse_loras
+
+            fuse_loras(model, loras)
+        if quant is Quantization.NF4:
+            _swap_to_4bit(model)
+            if device:
+                model.to(device)  # bitsandbytes quantizes each weight during this move
+        else:
+            # from_single_file ignores quantization_config, so int8 is applied after the load.
+            _quantize_in_place(model, quant)
+        return model
+
+    key = (
+        arch, "diffusion", file, _dtype_key(dtype), quant.value, _device_key(device),
+        *lora_cache_key(loras),
+    )
+    return _cached(key, build)
+
+
+def assemble_flux1_pipeline(
+    *,
+    arch: str,
+    img2img: bool,
+    diffusion_file: str,
+    config: dict[str, Any],
+    vae_file: str,
+    text_encoder_file: str,
+    clip_file: str,
+    dtype: Any,
+    quant: Quantization = Quantization.NONE,
+    vae_dtype: Any = None,
+    device: str | None = None,
+    loras: tuple[LoraRef, ...] = (),
+    cancel_check: Callable[[], None] | None = None,
+) -> Any:
+    """A whole FLUX.1 pipeline from the user's single files.
+
+    Encoders first and the transformer last, so peak memory is one component rather than the sum -
+    the transformer is by far the largest and nothing else is still being read when it lands.
+    """
+    from diffusers import FluxImg2ImgPipeline, FluxPipeline
+
+    if cancel_check is not None:
+        cancel_check()
+    vae = load_vae(arch, vae_file, dtype if vae_dtype is None else vae_dtype, device=device)
+    _release_transient()
+    clip, clip_tok, t5, t5_tok = load_flux1_text_encoders(
+        arch, clip_file, text_encoder_file, dtype, quant, device=device
+    )
+    _release_transient()
+    if cancel_check is not None:
+        cancel_check()
+    transformer = load_flux1_transformer(
+        arch, diffusion_file, config, dtype, quant, device=device, loras=loras
+    )
+    _release_transient()
+    cls = FluxImg2ImgPipeline if img2img else FluxPipeline
+    return cls(
+        scheduler=load_flux1_scheduler(), vae=vae, text_encoder=clip, tokenizer=clip_tok,
+        text_encoder_2=t5, tokenizer_2=t5_tok, transformer=transformer,
+    )
+
+
+def assemble_flux1_encoders(
+    *,
+    arch: str,
+    img2img: bool,
+    vae_file: str,
+    text_encoder_file: str,
+    clip_file: str,
+    dtype: Any,
+    quant: Quantization = Quantization.NONE,
+    vae_dtype: Any = None,
+    device: str | None = None,
+) -> Any:
+    """A **transformer-less** FLUX.1 pipeline: VAE + both text encoders + scheduler only.
+
+    dev is 24 GB of transformer against a 10 GB T5, so on a card that cannot hold both the prompt is
+    encoded through this first, the encoders are freed, and only then does the transformer load.
+    Same trick the trainer uses to precache before its base loads.
+    """
+    from diffusers import FluxImg2ImgPipeline, FluxPipeline
+
+    vae = load_vae(arch, vae_file, dtype if vae_dtype is None else vae_dtype, device=device)
+    _release_transient()
+    clip, clip_tok, t5, t5_tok = load_flux1_text_encoders(
+        arch, clip_file, text_encoder_file, dtype, quant, device=device
+    )
+    _release_transient()
+    cls = FluxImg2ImgPipeline if img2img else FluxPipeline
+    return cls(
+        scheduler=load_flux1_scheduler(), vae=vae, text_encoder=clip, tokenizer=clip_tok,
+        text_encoder_2=t5, tokenizer_2=t5_tok, transformer=None,
+    )
+
+
+def attach_flux1_transformer(
+    pipe: Any,
+    *,
+    arch: str,
+    diffusion_file: str,
+    config: dict[str, Any],
+    vae_file: str,
+    dtype: Any,
+    quant: Quantization = Quantization.NONE,
+    device: str | None = None,
+    loras: tuple[LoraRef, ...] = (),
+) -> Any:
+    """Free **both** text encoders, then load the transformer into the VRAM they were holding.
+
+    The VAE is kept: it is small and the decode still needs it. Dropped rather than moved to the
+    CPU, because a host that needs this staging cannot take a 10 GB encoder in RAM either.
+    """
+    pipe.text_encoder = None
+    pipe.tokenizer = None
+    pipe.text_encoder_2 = None
+    pipe.tokenizer_2 = None
+    unload_components(keep_files={vae_file})
+    _release_transient()
+    pipe.transformer = load_flux1_transformer(
+        arch, diffusion_file, config, dtype, quant, device=device, loras=loras
+    )
+    _release_transient()
+    return pipe
 
 
 def load_flux2_transformer(
@@ -1148,17 +1483,21 @@ def load_flux2_transformer(
                 **({"device_map": {"": device}} if device else {}),
             )
 
-        root = _flux2_config_dir(arch, file, config)
+        root = _transformer_config_dir(arch, file, config, "Flux2Transformer2DModel")
         kwargs: dict[str, Any] = {}
         if _is_gguf(file):
             kwargs["quantization_config"] = _gguf_config(dtype)
+        # NF4 loads to the CPU on purpose: bitsandbytes only quantizes on the move to CUDA, so
+        # streaming straight to the card materializes the whole bf16 base first. Measured on
+        # klein 4B: 7.77GB peak that way against 2.16GB this way, and 85s against 22s.
+        load_device = None if quant is Quantization.NF4 else device
         try:
             model = Flux2Transformer2DModel.from_single_file(
                 file,
                 config=str(root),
                 torch_dtype=dtype,
                 low_cpu_mem_usage=True,
-                device=device,
+                device=load_device,
                 local_files_only=True,
                 **kwargs,
             )

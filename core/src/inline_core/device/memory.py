@@ -52,6 +52,24 @@ _INT8_FACTOR = 0.5
 # int8 still cannot fit; it is CUDA-only and, like int8, never combined with CPU offload.
 _NF4_FACTOR = 0.28
 
+#: The ladder's own rungs, so a caller sizing a load reads them here rather than restating them.
+_RESIDENT_FACTORS = {
+    Quantization.NONE: 1.0,
+    Quantization.INT8: _INT8_FACTOR,
+    Quantization.NF4: _NF4_FACTOR,
+}
+
+
+def resident_factor(quant: Quantization) -> float:
+    """What fraction of a checkpoint's on-disk bf16 weight bytes survive a quantization rung."""
+    return _RESIDENT_FACTORS.get(quant, 1.0)
+
+
+def activation_headroom_gb() -> float:
+    """VRAM the fit ladder reserves beyond the weights, for activations and allocator slack."""
+    return _ACTIVATION_HEADROOM_GB
+
+
 
 def _system_ram_gb() -> float | None:
     try:

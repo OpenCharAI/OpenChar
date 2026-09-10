@@ -263,6 +263,40 @@ def _krea2_caption(components: Any, caption: str, device: str) -> dict[str, Any]
 # --- FLUX.2 -------------------------------------------------------------------------------------
 
 
+def _flux1_latent(vae: Any, pixels: Any) -> Any:
+    """FLUX.1 shares Z-Image's scalar VAE normalization, and adds one constraint on the grid.
+
+    ``_pack_latents`` folds the H/8 latent 2x2, and ``_unpack_latents`` floors on the way back, so
+    an odd latent grid silently loses a row rather than raising. Refused here, at the first step of
+    the precache, instead of training against latents that are quietly the wrong size.
+    """
+    height, width = pixels.shape[-2], pixels.shape[-1]
+    if (height // 8) % 2 or (width // 8) % 2:
+        raise RuntimeError(
+            f"FLUX.1 trains at a resolution that is a multiple of 16, not {height}x{width}: the "
+            "latent grid is folded 2x2 after the VAE's 8x downscale."
+        )
+    return _zimage_latent(vae, pixels)
+
+
+def _flux1_caption(components: Any, caption: str, device: str) -> dict[str, Any]:
+    """Caption -> conditioning, straight from ``FluxPipeline.encode_prompt``.
+
+    Two tensors, not one, and both are needed: T5-XXL gives the (512, 4096) sequence and CLIP-L the
+    (768,) pooled vector the timestep embedder mixes in. Routed through the pipeline because the
+    details are easy to get subtly wrong and impossible to notice - CLIP truncates at 77 tokens
+    while T5 pads to 512, and the pooled vector is the EOS position rather than a mean.
+    """
+    import torch
+
+    with torch.no_grad():
+        embeds, pooled, _ids = components.pipeline.encode_prompt(
+            prompt=caption or "", prompt_2=None, device=torch.device(device),
+            max_sequence_length=512,
+        )
+    return {"embed": embeds[0], "pooled": pooled[0]}
+
+
 def _flux2_latent(vae: Any, pixels: Any) -> Any:
     """Pixels -> the latent FLUX.2 actually denoises, matching ``_encode_vae_image``.
 
@@ -304,6 +338,9 @@ def _flux2_caption(components: Any, caption: str, device: str) -> dict[str, Any]
 #: a training latent is byte-for-byte what generation would produce from the same image.
 _ENCODERS = {
     archs.KREA2: (_krea2_latent, _krea2_caption),
+    # FLUX.1 normalizes with the same scalar (latent - shift) * scale Z-Image does, not FLUX.2's
+    # running batch-norm statistics, so the latent encoder is shared rather than copied.
+    archs.FLUX1: (_flux1_latent, _flux1_caption),
     archs.FLUX2: (_flux2_latent, _flux2_caption),
 }
 

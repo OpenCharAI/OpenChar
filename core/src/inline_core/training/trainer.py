@@ -202,7 +202,7 @@ def _activation_offload(enabled: bool) -> Any:
 #: The cached-item keys that carry activations and take the compute dtype. Everything else moves
 #: unchanged: a bool mask would become weights, index tensors would stop addressing anything, and
 #: H3's float64 rotary grid would lose its mantissa. None of it raises.
-_ACTIVATION_KEYS = frozenset({"latent", "embed", "audio"})
+_ACTIVATION_KEYS = frozenset({"latent", "embed", "pooled", "audio"})
 
 
 def _to_device(item: dict[str, Any], device: Any, dtype: Any) -> dict[str, Any]:
@@ -249,6 +249,7 @@ def train(manifest: dict[str, Any]) -> str | None:
     # that reaches the UI: this subprocess installs no logging handler.
     data, unconditional, shift = cache.build(
         manifest["datasetDir"], manifest["modelsDir"], arch.key, str(device), dtype, resolution,
+        base_mode=manifest["baseMode"],
         flip=bool(hp.get("flipAugment")), dropout=dropout,
         clip_frames=archs.clip_frames(arch, hp.get("clipSeconds")),
         clip_window=str(hp.get("clipWindow") or "start"),

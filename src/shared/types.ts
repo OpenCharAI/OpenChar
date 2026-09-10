@@ -645,7 +645,7 @@ export interface ModelDownloadErrorEvent {
  * The model family a LoRA is trained for. `minimax-h3` and `ltx-2-5` are the video models: they
  * train on stills or clips, and the adapter applies to every node of that family at generation time.
  */
-export type TrainingArch = 'z-image' | 'krea2' | 'flux2' | 'minimax-h3' | 'ltx-2-5'
+export type TrainingArch = 'z-image' | 'krea2' | 'flux1' | 'flux2' | 'minimax-h3' | 'ltx-2-5'
 
 /**
  * Which shape an LTX-2.5 run trains in. `clip` learns a look and how it moves, from single clips.
@@ -678,9 +678,11 @@ export interface DatasetRepoPreview {
 /**
  * Which base checkpoint a run trains against. `raw` is Krea 2's undistilled base (the recommended
  * path - the LoRA then applies to Turbo at generation time); the turbo modes train against a
- * distilled checkpoint and need a training adapter to avoid turbo drift.
+ * distilled checkpoint and need a training adapter to avoid turbo drift. `raw_9b` is FLUX.2 klein
+ * Base 9B - a size rather than a distillation choice, and `raw` stays 4B so saved runs resolve to
+ * the checkpoint they were trained against.
  */
-export type TrainingBaseMode = 'turbo_adapter' | 'deturbo' | 'raw'
+export type TrainingBaseMode = 'turbo_adapter' | 'deturbo' | 'raw' | 'raw_9b'
 
 /**
  * Precision of the frozen base during training. The LoRA itself is always full precision, so `nf4`
