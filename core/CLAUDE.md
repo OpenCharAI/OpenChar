@@ -144,6 +144,14 @@ between nodes and are never takes.
   sharded text encoder).
 - **Data dir** - `INLINE_DATA_DIR`, else `./.inline`. Engine-owned working data: `runs.db` (durable
   runs) and `takes/` (output bytes).
+- **Asset store** - `INLINE_ASSET_DIR`, else `./.inline-assets`. Content-addressed uploads from
+  `POST /v1/assets`. A graph names one as `{"ref": "asset", "id": ...}` on an `input/image` or
+  `input/video` node and the server rewrites it to that file at submit, because every reader opens a
+  path; an id the store does not hold is a 422, never a mid-run failure.
+- **Characters dir** - `INLINE_CHARACTERS_DIR`, else `<models root>/characters`. Where `.char` files
+  are written, and searched first when one is resolved. Point it off a shared models root (a cloud
+  worker's pod disk) so one user's characters are not everyone's. The `/v1/models` picker still
+  scans only the models roots.
 - **Server bind** - `INLINE_HOST` (default `127.0.0.1`), `INLINE_PORT` (default `8848`).
 - **Model overrides** - e.g. `INLINE_ZIMAGE_MODEL` (a single `.safetensors` file path, a local
   diffusers dir, or a HF repo id for Z-Image). Auto-resolved from `diffusion_models/` when unset.

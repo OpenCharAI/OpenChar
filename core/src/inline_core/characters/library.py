@@ -11,7 +11,7 @@ import unicodedata
 from pathlib import Path
 from typing import Any
 
-from ..config import models_dir, models_dirs
+from ..config import characters_dir, models_dirs
 from . import charfile as cf
 from . import encode
 
@@ -23,7 +23,16 @@ _UNSAFE = re.compile(r"[^A-Za-z0-9 ._-]+")
 
 def root() -> Path:
     """The writable characters folder, created on demand so a fresh install can save."""
-    return models_dir() / CATEGORY
+    return characters_dir()
+
+
+def _bases() -> list[Path]:
+    """Every folder a character is looked for in, the writable one first."""
+    bases = [characters_dir()]
+    for models_root in models_dirs():
+        if (base := models_root / CATEGORY) not in bases:
+            bases.append(base)
+    return bases
 
 
 def file_name(name: str) -> str:
@@ -61,8 +70,7 @@ def resolve(chosen: str) -> Path | None:
     name = str(chosen or "").strip()
     if not name:
         return None
-    for models_root in models_dirs():
-        base = models_root / CATEGORY
+    for base in _bases():
         for candidate in (base / name, base / Path(name).name):
             if candidate.is_file():
                 return candidate
@@ -72,8 +80,7 @@ def resolve(chosen: str) -> Path | None:
 def list_files() -> list[Path]:
     out: list[Path] = []
     seen: set[str] = set()
-    for models_root in models_dirs():
-        base = models_root / CATEGORY
+    for base in _bases():
         if not base.is_dir():
             continue
         for entry in sorted(base.glob(f"*{SUFFIX}")):

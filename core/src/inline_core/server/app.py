@@ -13,7 +13,7 @@ import tempfile
 from contextlib import asynccontextmanager
 from os.path import basename
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from urllib.parse import unquote
 
 from fastapi import FastAPI, Query, Request, Response, WebSocket, WebSocketDisconnect
@@ -21,7 +21,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .. import __version__
-from ..config import models_dirs
+from ..config import assets_dir, models_dirs
 from ..device.memory import MemoryPolicy
 from ..device.policy import DevicePolicy
 from ..errors import GraphValidationError, UnknownNodeType
@@ -158,6 +158,49 @@ def _pin_web_mime_types() -> None:
         mimetypes.add_type(mime, ext)
 
 
+_UPLOAD_SOURCES = frozenset({"input/image", "input/video"})
+
+
+class _UnknownAsset(Exception):
+    def __init__(self, node_id: str, asset_id: str) -> None:
+        super().__init__(
+            f"Asset {asset_id!r} is not in this engine's store; "
+            "upload it with POST /v1/assets first."
+        )
+        self.node_id = node_id
+
+
+def _resolve_uploads(raw: Any, assets: AssetStore) -> Any:
+    """Each `{"ref": "asset"}` on a source node, rewritten to its file in this engine's store."""
+    # At submit, because only the server knows where its store is and every reader opens a path.
+    if not isinstance(raw, dict):
+        return raw
+    graph = cast(dict[str, Any], raw)
+    nodes = graph.get("nodes")
+    if not isinstance(nodes, list):
+        return graph
+    return {**graph, "nodes": [_resolve_node(item, assets) for item in cast(list[Any], nodes)]}
+
+
+def _resolve_node(item: Any, assets: AssetStore) -> Any:
+    if not isinstance(item, dict):
+        return item
+    node = cast(dict[str, Any], item)
+    params = node.get("params")
+    if node.get("type") not in _UPLOAD_SOURCES or not isinstance(params, dict):
+        return node
+    fields = cast(dict[str, Any], params)
+    asset = fields.get("asset")
+    if not isinstance(asset, dict) or cast(dict[str, Any], asset).get("ref") != "asset":
+        return node
+    asset_id = str(cast(dict[str, Any], asset).get("id", ""))
+    path = assets.path(asset_id)
+    if path is None:
+        raise _UnknownAsset(str(node.get("id", "")), asset_id)
+    resolved = {"ref": "path", "path": str(path.resolve())}
+    return {**node, "params": {**fields, "asset": resolved}}
+
+
 def create_app(
     registry: Registry | None = None,
     cache: NodeCache | None = None,
@@ -181,7 +224,7 @@ def create_app(
     # Empty by default so every existing caller keeps working: a node type with no provider simply
     # reports no model requirements, which is what a torch-less install already showed.
     reqs = requirements if requirements is not None else RequirementsRegistry()
-    assets = AssetStore(Path(asset_dir or "./.inline-assets"))
+    assets = AssetStore(Path(asset_dir) if asset_dir else assets_dir())
     # An explicit models_root is that caller's whole world; otherwise scan every configured root so
     # a custom --models-dir does not hide ./models.
     catalog = ModelCatalog([Path(models_root)] if models_root else models_dirs())
@@ -299,7 +342,7 @@ def create_app(
             return _error("invalid_request", "'target' is required.", 422)
         meta = body.get("meta")
         try:
-            graph = parse_graph(body.get("graph"))
+            graph = parse_graph(_resolve_uploads(body.get("graph"), assets))
             record, created = manager.submit(
                 graph,
                 target,
@@ -310,6 +353,8 @@ def create_app(
             return _error("invalid_graph", str(error), 422, node_id=error.node_id)
         except RunConflict as error:
             return _error("conflict", str(error), 409)
+        except _UnknownAsset as error:
+            return _error("invalid_graph", str(error), 422, node_id=error.node_id)
         return JSONResponse(
             {"runId": record.state.run_id, "status": record.state.status.value},
             status_code=201 if created else 200,

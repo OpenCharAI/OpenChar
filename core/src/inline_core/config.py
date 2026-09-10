@@ -40,6 +40,20 @@ def data_dir() -> Path:
     return Path(env).expanduser() if env else Path(".inline")
 
 
+def assets_dir() -> Path:
+    """Where `POST /v1/assets` stores uploads. `INLINE_ASSET_DIR`, else `./.inline-assets`."""
+    # A knob of its own so callers' uploads can stay off a data dir that other workers share.
+    env = os.environ.get("INLINE_ASSET_DIR")
+    return Path(env).expanduser() if env else Path(".inline-assets")
+
+
+def characters_dir() -> Path:
+    """Where `.char` files are written. `INLINE_CHARACTERS_DIR`, else `<models dir>/characters`."""
+    # Separate from the models root because a shared one would hand every user's characters to all.
+    env = os.environ.get("INLINE_CHARACTERS_DIR")
+    return Path(env).expanduser() if env else models_dir() / "characters"
+
+
 def extensions_dir() -> Path:
     """Community extensions root. `INLINE_EXTENSIONS_DIR`, else `./extensions` (so a dev checkout
     keeps it beside `./models` and `./.inline`). Holds `state.json`, the host constraint snapshot,

@@ -209,6 +209,9 @@ python -m inline_core.server          # bare server (INLINE_HOST / INLINE_PORT f
 ```
 
 Working data (the run database and takes) lives in `INLINE_DATA_DIR` (default `./.inline`).
+Uploads from `POST /v1/assets` live in `INLINE_ASSET_DIR` (default `./.inline-assets`); a graph
+refers to one as `{"ref": "asset", "id": "sha256-..."}` on an `input/image` or `input/video`
+node. Saved characters are written to `INLINE_CHARACTERS_DIR` (default `<models dir>/characters`).
 
 ## API (v1)
 

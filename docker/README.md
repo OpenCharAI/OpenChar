@@ -69,23 +69,25 @@ JupyterLab and the file browser print a generated password to the container log 
 
 ## Environment
 
-| Variable                      | Default                    | What it does                                        |
-| ----------------------------- | -------------------------- | --------------------------------------------------- |
-| `INLINE_MODELS_DIR`           | `/workspace/models`        | where weights are scanned from and downloaded to    |
-| `INLINE_DATA_DIR`             | `/workspace/.inline`       | run database and generated takes                    |
-| `INLINE_EXTENSIONS_DIR`       | `/workspace/extensions`    | installed community extensions                      |
-| `INLINE_STUDIO_DATA_DIR`      | `/workspace/inline-studio` | recents, settings, saved fal key                    |
-| `INLINE_STUDIO_WORKSPACE_DIR` | `/workspace/projects`      | your `.inlinestudio` project folders                |
-| `HF_HOME`                     | `/workspace/huggingface`   | Hugging Face cache for the captioner and annotators |
-| `INLINE_PORT`                 | `8848`                     | port the app serves on                              |
-| `INLINE_PROFILE`              | auto                       | `gpu-max`, `lowvram` or `cpu`                       |
-| `INLINE_VRAM_BUDGET_GB`       | auto                       | treat the GPU as having this much usable VRAM       |
-| `ENABLE_JUPYTER`              | `1`                        | JupyterLab on 8888                                  |
-| `ENABLE_FILEBROWSER`          | `1`                        | file browser on 8080                                |
-| `JUPYTER_PASSWORD`            | generated                  | JupyterLab token                                    |
-| `FILEBROWSER_PASSWORD`        | generated                  | file browser password for user `admin`              |
-| `HF_TOKEN`                    | unset                      | needed for gated repos such as FLUX.2 dev           |
-| `FAL_KEY`                     | unset                      | fal key for the hosted API nodes                    |
+| Variable                      | Default                        | What it does                                        |
+| ----------------------------- | ------------------------------ | --------------------------------------------------- |
+| `INLINE_MODELS_DIR`           | `/workspace/models`            | where weights are scanned from and downloaded to    |
+| `INLINE_DATA_DIR`             | `/workspace/.inline`           | run database and generated takes                    |
+| `INLINE_ASSET_DIR`            | `/workspace/.inline-assets`    | uploads from `POST /v1/assets`                      |
+| `INLINE_CHARACTERS_DIR`       | `/workspace/models/characters` | where saved `.char` characters are written          |
+| `INLINE_EXTENSIONS_DIR`       | `/workspace/extensions`        | installed community extensions                      |
+| `INLINE_STUDIO_DATA_DIR`      | `/workspace/inline-studio`     | recents, settings, saved fal key                    |
+| `INLINE_STUDIO_WORKSPACE_DIR` | `/workspace/projects`          | your `.inlinestudio` project folders                |
+| `HF_HOME`                     | `/workspace/huggingface`       | Hugging Face cache for the captioner and annotators |
+| `INLINE_PORT`                 | `8848`                         | port the app serves on                              |
+| `INLINE_PROFILE`              | auto                           | `gpu-max`, `lowvram` or `cpu`                       |
+| `INLINE_VRAM_BUDGET_GB`       | auto                           | treat the GPU as having this much usable VRAM       |
+| `ENABLE_JUPYTER`              | `1`                            | JupyterLab on 8888                                  |
+| `ENABLE_FILEBROWSER`          | `1`                            | file browser on 8080                                |
+| `JUPYTER_PASSWORD`            | generated                      | JupyterLab token                                    |
+| `FILEBROWSER_PASSWORD`        | generated                      | file browser password for user `admin`              |
+| `HF_TOKEN`                    | unset                          | needed for gated repos such as FLUX.2 dev           |
+| `FAL_KEY`                     | unset                          | fal key for the hosted API nodes                    |
 
 `FAL_KEY` is only read when no key has been saved in the app yet. Once you save one in Settings it
 lives on the volume and wins over the environment variable.

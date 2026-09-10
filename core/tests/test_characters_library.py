@@ -16,6 +16,7 @@ def models_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     root = tmp_path / "models"
     monkeypatch.setenv("INLINE_MODELS_DIR", str(root))
     monkeypatch.delenv("INLINE_EXTRA_MODELS_DIRS", raising=False)
+    monkeypatch.delenv("INLINE_CHARACTERS_DIR", raising=False)
     # models_dirs() always appends the relative ./models, so the checkout's real one leaks in.
     monkeypatch.chdir(tmp_path)
     return root
@@ -103,3 +104,52 @@ def test_content_hash_changes_when_the_file_changes() -> None:
     edited.members["text/description.md"] = b"red jacket"
     cf.write(path, edited)
     assert library.content_hash(path) != before
+
+
+def test_with_no_characters_dir_set_saving_is_unchanged(models_root: Path) -> None:
+    assert library.save(_doc("Ada")) == models_root / "characters" / "Ada.char"
+
+
+def test_characters_dir_is_where_a_character_is_written(
+    models_root: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    private = tmp_path / "private"
+    monkeypatch.setenv("INLINE_CHARACTERS_DIR", str(private))
+    saved = library.save(_doc("Ada"))
+    assert saved == private / "Ada.char"
+    # The point of the knob: a shared models root must not receive one user's character.
+    assert not (models_root / "characters" / "Ada.char").exists()
+
+
+def test_resolve_prefers_the_characters_dir_over_a_models_root(
+    models_root: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    shared = library.save(_doc("Ada"))
+    private = tmp_path / "private"
+    monkeypatch.setenv("INLINE_CHARACTERS_DIR", str(private))
+    private.mkdir()
+    cf.write(private / "Ada.char", _doc("Ada"))
+    assert library.resolve("Ada.char") == private / "Ada.char"
+    assert shared.is_file()
+
+
+def test_resolve_still_finds_a_character_only_in_a_models_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    library.save(_doc("Ada"))
+    monkeypatch.setenv("INLINE_CHARACTERS_DIR", str(tmp_path / "private"))
+    assert library.resolve("Ada.char") is not None
+
+
+def test_list_files_covers_both_without_listing_a_name_twice(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    library.save(_doc("Ada"))
+    library.save(_doc("Bo"))
+    private = tmp_path / "private"
+    monkeypatch.setenv("INLINE_CHARACTERS_DIR", str(private))
+    library.save(_doc("Cy"))
+    cf.write(private / "Ada.char", _doc("Ada"))
+    names = [p.name for p in library.list_files()]
+    assert sorted(names) == ["Ada.char", "Bo.char", "Cy.char"]
+    assert [p for p in library.list_files() if p.name == "Ada.char"][0].parent == private
