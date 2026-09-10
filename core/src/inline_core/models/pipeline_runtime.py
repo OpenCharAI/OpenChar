@@ -286,22 +286,29 @@ def supports_prompt_embeds(pipe: Any) -> bool:
 
 
 @contextmanager
-def text_encoder_detached(pipe: Any, active: bool) -> Iterator[None]:
-    """Temporarily remove the text encoder from the pipeline for the denoise, then restore it.
+def text_encoder_detached(
+    pipe: Any, active: bool, encoders: tuple[str, ...] = ("text_encoder",)
+) -> Iterator[None]:
+    """Temporarily remove the text encoder(s) from the pipeline for the denoise, then restore them.
 
     diffusers infers the execution device from *some* registered module and iterates a set, so
     with the encoder parked on the CPU the pick is non-deterministic and can build latents on the
     CPU while the generator is on CUDA. Detaching leaves only CUDA modules. No-op on the raw path.
+
+    ``encoders`` names every attribute to detach, because a pipeline can have more than one and
+    leaving either behind reinstates the non-determinism this exists to remove.
     """
     if not active:
         yield
         return
-    saved = getattr(pipe, "text_encoder", None)
-    pipe.text_encoder = None
+    saved = {name: getattr(pipe, name, None) for name in encoders}
+    for name in encoders:
+        setattr(pipe, name, None)
     try:
         yield
     finally:
-        pipe.text_encoder = saved
+        for name, value in saved.items():
+            setattr(pipe, name, value)
 
 
 def split_blocks(blocks: Any, *, through: str) -> tuple[Any, Any]:
@@ -363,6 +370,7 @@ def encoded_prompt_kwargs(
     *,
     encode: Callable[[str], dict[str, Any]],
     fallback: Callable[[], dict[str, Any]],
+    encoders: tuple[str, ...] = ("text_encoder",),
 ) -> dict[str, Any]:
     """Pre-encode the prompt on the GPU, park the text encoder on the CPU, and return the
     pipeline call kwargs, so the encoder's GB go to the denoise instead of idling on the card.
@@ -371,27 +379,35 @@ def encoded_prompt_kwargs(
     dequantizes per-op, while a CPU encode would dequantize the whole encoder into host RAM, and
     without no_grad the full activation graph is retained. Parking is a plain tensor copy. Any
     failure falls back to the raw-prompt path, so this optimization can never break a run."""
-    text_encoder = getattr(pipe, "text_encoder", None)
-    if not is_resident(policy) or text_encoder is None or not supports_prompt_embeds(pipe):
+    # Every named encoder, in order. FLUX.1 has two, and parking only the first would move its
+    # 246MB CLIP while leaving a 9.8GB T5 on the card - the opposite of the point.
+    staged = [(name, getattr(pipe, name, None)) for name in encoders]
+    staged = [(name, module) for name, module in staged if module is not None]
+    if not is_resident(policy) or not staged or not supports_prompt_embeds(pipe):
         return fallback()
+    # The park decision is taken on the largest encoder, which is the one that crowds the denoise.
+    text_encoder = max((m for _n, m in staged), key=module_bytes)
 
     device = str(policy.placement("denoiser").device)
     try:
         logger.info("Encoding prompt on %s (no_grad) | host RAM %.1fGB", device, host_ram_gb())
-        text_encoder.to(device)
+        for _name, module in staged:
+            module.to(device)
         with torch.no_grad():
             kwargs = encode(device)
         park = should_park_encoder(policy, text_encoder)
         if park:
-            # torchao's .to() round-trip on quantized weights is unreliable, so only the encoder
-            # moves.
-            text_encoder.to("cpu")
+            # torchao's .to() round-trip on quantized weights is unreliable, so only the encoders
+            # move.
+            for _name, module in staged:
+                module.to("cpu")
             free_vram()
     except Exception as error:  # noqa: BLE001 - an optimization must never break generation
         logger.warning(
             "Text-encoder GPU encode failed (%s); denoising with the encoder resident.", error
         )
-        try_call(text_encoder.to, device)
+        for _name, module in staged:
+            try_call(module.to, device)
         return fallback()
 
     if park:

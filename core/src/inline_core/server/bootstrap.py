@@ -98,6 +98,15 @@ def _register_builtins(
     except ImportError:
         pass
     try:
+        from ..models.flux1.provider import Flux1Provider
+        from ..models.flux1.runner import FLUX1, register_flux1
+
+        register_flux1(registry, store, policy)
+        requirements.register(FLUX1.type, Flux1Provider())
+        registered.append(FLUX1.type)
+    except ImportError:
+        pass
+    try:
         from ..models.minimaxh3.provider import MiniMaxH3Provider
         from ..models.minimaxh3.runner import VARIANTS, register_minimax_h3
 

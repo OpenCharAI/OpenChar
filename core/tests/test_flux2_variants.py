@@ -32,8 +32,9 @@ KLEIN_4B = {
     "rope_theta": 2000,
     "timestep_guidance_channels": 256,
 }
-KLEIN_9B = {**KLEIN_4B, "joint_attention_dim": 12288, "num_attention_heads": 32, "num_layers": 6,
-            "num_single_layers": 30}
+#: Block counts read from the published checkpoint's own header, not guessed: 8 + 24, not 6 + 30.
+KLEIN_9B = {**KLEIN_4B, "joint_attention_dim": 12288, "num_attention_heads": 32, "num_layers": 8,
+            "num_single_layers": 24}
 DEV = {**KLEIN_4B, "joint_attention_dim": 15360, "num_attention_heads": 48, "num_layers": 8,
        "num_single_layers": 48, "guidance_embeds": True}
 

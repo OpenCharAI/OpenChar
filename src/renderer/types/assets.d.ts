@@ -9,5 +9,10 @@ declare module '*.png' {
   export default src
 }
 
+declare module '*.jpg' {
+  const src: string
+  export default src
+}
+
 /** Side-effect CSS imports (e.g. '@xyflow/react/dist/style.css'); Vite bundles them. */
 declare module '*.css'

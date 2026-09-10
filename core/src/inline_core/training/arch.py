@@ -7,7 +7,7 @@ call is shaped. Those four live here so ``trainer.py`` stays one loop.
 
 All of them are rectified flow, but with **opposite conventions**, which is exactly the kind of
 detail a test should pin: Z-Image and MiniMax H3 predict ``clean - noise`` at timestep
-``1 - sigma``, while Krea 2, FLUX.2 and LTX-2.5 predict ``noise - clean`` at timestep ``sigma``.
+``1 - sigma``, while Krea 2, FLUX.1, FLUX.2 and LTX-2.5 predict ``noise - clean`` at ``sigma``.
 
 LTX-2.5 is the one that looks like a third convention and is not. Its published model is an
 ``X0Model`` returning a denoised latent, but that is a weightless wrapper over a velocity model, and
@@ -23,6 +23,7 @@ from typing import Any
 
 Z_IMAGE = "z-image"
 KREA2 = "krea2"
+FLUX1 = "flux1"
 FLUX2 = "flux2"
 MINIMAX_H3 = "minimax-h3"
 LTX25 = "ltx-2-5"
@@ -57,6 +58,37 @@ _KREA2_TARGETS = [
     "time_embed.linear_1",
     "time_embed.linear_2",
     "time_mod_proj",
+]
+
+
+#: FLUX.1: every Linear in the MMDiT stack, confirmed against FluxTransformer2DModel's own
+#: named_modules (19 double + 38 single blocks on dev). The single blocks are ``pre_only``, so they
+#: carry no ``attn.to_out`` at all - the ModuleList/Linear suffix clash FLUX.2 has below does not
+#: recur here, and ``to_out.0`` reaches the double blocks alone.
+#:
+#: ``proj_out`` matches **twice**, deliberately: PEFT matches by module-name suffix, so it reaches
+#: the 38 single blocks' output projections and, by exact name, the model's own final ``proj_out``.
+#: Both are plain Linears, so nothing breaks, and the extra one is a 3072x64 tail. Dropping it to
+#: avoid that would also drop the single-block projections, which every published FLUX.1 LoRA
+#: carries. The AdaLN modulation Linears (``norm1.linear``, ``norm.linear``, ``norm_out.linear``)
+#: stay out, for the reason ``_MINIMAX_H3_TARGETS`` gives about ``adaln_proj``.
+_FLUX1_TARGETS = [
+    "to_q",
+    "to_k",
+    "to_v",
+    "to_out.0",
+    "add_q_proj",
+    "add_k_proj",
+    "add_v_proj",
+    "to_add_out",
+    "ff.net.0.proj",
+    "ff.net.2",
+    "ff_context.net.0.proj",
+    "ff_context.net.2",
+    "proj_mlp",
+    "proj_out",
+    "x_embedder",
+    "context_embedder",
 ]
 
 
@@ -251,6 +283,66 @@ def _krea2_forward(transformer: Any, noisy: Any, timestep: Any, item: dict[str, 
 
 
 
+# --- FLUX.1 ---------------------------------------------------------------------------------------
+
+
+#: What the guidance embedder is trained at. dev is guidance-distilled, so the embedder is part of
+#: the model rather than a sampler setting, and training it at the 3.5 dev generates with teaches
+#: the LoRA to change how guidance itself behaves. Every reference trainer pins it to 1.
+_FLUX1_TRAIN_GUIDANCE = 1.0
+
+
+def _flux1_sigma(device: Any, shift: float) -> Any:
+    import torch
+
+    # Logit-normal, matching the reference trainers. FLUX.1's shift is resolution dependent and
+    # computed at inference (``calculate_shift``), so it is not baked into the training
+    # distribution - the same reasoning as Krea 2 and FLUX.2.
+    del shift
+    return torch.sigmoid(torch.randn((), device=device))
+
+
+def _flux1_forward(transformer: Any, noisy: Any, timestep: Any, item: dict[str, Any]) -> Any:
+    """One prediction from FluxTransformer2DModel, mirroring FluxPipeline's denoise call.
+
+    The precached latent is the VAE's own 16-channel H/8 output, so packing is the pipeline's 2x2
+    fold rather than FLUX.2's plain flatten. ``timestep`` is the raw sigma: the pipeline passes
+    ``timestep / 1000`` where its own timesteps are ``sigma * 1000``.
+
+    Conditioning is two tensors, which no other arch here has: T5-XXL's sequence and CLIP-L's pooled
+    vector. Guidance is passed unconditionally, which is safe only because ``_flux1_base_file``
+    refuses schnell - the model picks a 2- or 3-argument embedder off its own ``guidance_embeds``,
+    so a mismatch either way is a TypeError, and ``arch.forward`` cannot read that config reliably
+    because under DDP it is handed the wrapper rather than the model. The model scales by 1000
+    itself, so this is the raw value.
+    """
+    import torch
+    from diffusers import FluxPipeline as P
+
+    channels, height, width = noisy.shape
+    packed = P._pack_latents(noisy.unsqueeze(0), 1, channels, height, width)
+    img_ids = P._prepare_latent_image_ids(1, height // 2, width // 2, noisy.device, noisy.dtype)
+    embed = item["embed"]
+    embed = embed.unsqueeze(0) if embed.dim() == 2 else embed
+    pooled = item["pooled"]
+    pooled = pooled.unsqueeze(0) if pooled.dim() == 1 else pooled
+    # 2-D on purpose: a 3-D txt_ids is deprecated and silently indexed back down to this.
+    txt_ids = torch.zeros(embed.shape[1], 3, device=noisy.device, dtype=noisy.dtype)
+
+    out = transformer(
+        hidden_states=packed,
+        encoder_hidden_states=embed,
+        pooled_projections=pooled,
+        timestep=timestep.reshape(1),
+        img_ids=img_ids,
+        txt_ids=txt_ids,
+        guidance=torch.full((1,), _FLUX1_TRAIN_GUIDANCE, device=noisy.device, dtype=torch.float32),
+        return_dict=False,
+    )[0]
+    # Pixel dimensions and the VAE's 8x factor, exactly what the pipeline passes.
+    return P._unpack_latents(out, height * 8, width * 8, 8)[0]
+
+
 # --- FLUX.2 ---------------------------------------------------------------------------------------
 
 
@@ -441,6 +533,17 @@ ARCHS: dict[str, TrainingArch] = {
         timestep=lambda sigma: sigma,
         target=lambda clean, noise: noise - clean,
         forward=_krea2_forward,
+    ),
+    FLUX1: TrainingArch(
+        key=FLUX1,
+        target_modules=_FLUX1_TARGETS,
+        sigma=_flux1_sigma,
+        # Rectified flow, Krea 2's convention: x_t = (1 - sigma) * clean + sigma * noise, so
+        # d x_t / d sigma is noise - clean, and the model is called at the sigma itself. Verified
+        # against FluxPipeline, whose scheduler timesteps are sigma * 1000 and which divides back.
+        timestep=lambda sigma: sigma,
+        target=lambda clean, noise: noise - clean,
+        forward=_flux1_forward,
     ),
     FLUX2: TrainingArch(
         key=FLUX2,

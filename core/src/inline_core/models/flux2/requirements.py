@@ -77,6 +77,14 @@ _EXTRAS: tuple[tuple[str, str, str, str, str], ...] = (
         "flux-2-klein-9b.safetensors",
     ),
     (
+        "diffusion_klein_9b_base",
+        "Klein 9B Base (for LoRA training)",
+        "diffusion_models",
+        # Gated too, for the same reason as the distilled 9B above: no ungated mirror has it.
+        "black-forest-labs/FLUX.2-klein-base-9B",
+        "flux-2-klein-base-9b.safetensors",
+    ),
+    (
         "text_encoder_qwen3_8b",
         "Qwen3-8B text encoder (for Klein 9B)",
         "text_encoders",
@@ -159,6 +167,13 @@ def _identify_gguf(path: Path) -> V.Flux2Variant | None:
     return V.get(f"klein-{size}-base" if is_base else f"klein-{size}")
 
 
+#: Key fragments that rule a checkpoint out as a plain text-only Qwen3 encoder, each for a model
+#: that really does sit in ``text_encoders/`` beside one: Qwen3-VL (Krea 2), then T5-XXL and CLIP-L
+#: (FLUX.1's two). T5 is the dangerous one - its ``encoder.embed_tokens.weight`` is 32128 x 4096,
+#: and 4096 is exactly the width klein 9B matches on.
+_NOT_A_QWEN3_ENCODER = (".visual.", ".vision_", ".language_model.", "encoder.block.", "text_model.")
+
+
 def _encoder_width(path: Path) -> int | None:
     """The hidden width of a **plain** text-only Qwen3 checkpoint, or None if it is anything else.
 
@@ -166,7 +181,8 @@ def _encoder_width(path: Path) -> int | None:
     and which sits in the same ``text_encoders/`` folder) share an embedding matrix of exactly
     151936 x 2560, so matching on width alone silently loaded the vision-language model into
     FLUX.2's text-only encoder and rendered structured noise. A multimodal checkpoint carries a
-    vision tower and nests its text stack under ``language_model``; both are rejected here.
+    vision tower and nests its text stack under ``language_model``; both are rejected here, as are
+    the two encoders FLUX.1 brings to the same folder (see ``_NOT_A_QWEN3_ENCODER``).
     """
     if path.is_dir():
         return _folder_encoder_width(path)
@@ -178,7 +194,7 @@ def _encoder_width(path: Path) -> int | None:
         keys = CheckpointReader(path).shapes()
     except Exception:  # noqa: BLE001 - an unreadable file simply does not match
         return None
-    if any(".visual." in k or ".vision_" in k or ".language_model." in k for k in keys):
+    if any(fragment in k for k in keys for fragment in _NOT_A_QWEN3_ENCODER):
         return None
     for key, shape in keys.items():
         if key.endswith("embed_tokens.weight") and len(shape) == 2:

@@ -55,9 +55,15 @@ const BASES: Record<TrainingArch, { value: TrainingBaseMode; label: string }[]> 
     { value: 'raw', label: 'Krea 2 RAW (recommended)' },
     { value: 'turbo_adapter', label: 'Krea 2 Turbo (+ training adapter)' },
   ],
+  // dev is guidance-distilled rather than step-distilled, so it is itself the training base and
+  // there is no adapter and no base/turbo split. schnell is step-distilled and is refused.
+  flux1: [{ value: 'raw', label: 'FLUX.1 dev (required)' }],
   // FLUX.2 has no de-distillation adapter: you train on a Base checkpoint and the adapter still
   // loads on the distilled build for generation, which is both faster and better.
-  flux2: [{ value: 'raw', label: 'FLUX.2 Base (required)' }],
+  flux2: [
+    { value: 'raw', label: 'FLUX.2 klein Base 4B (recommended)' },
+    { value: 'raw_9b', label: 'FLUX.2 klein Base 9B (needs ~22GB)' },
+  ],
   // H3 ships one undistilled build per partition, and only fl2va trains. The LoRA loads on all four
   // H3 nodes afterwards, ref2va included - the two partitions are the same architecture.
   'minimax-h3': [{ value: 'raw', label: 'MiniMax H3 FL2VA (required)' }],
@@ -71,7 +77,7 @@ const BASES: Record<TrainingArch, { value: TrainingBaseMode; label: string }[]> 
  * cards people have; MiniMax H3 is absent for the opposite reason - it is 4-bit only, and a picker
  * with one option is a lie. Both are hidden rather than shown and then refused.
  */
-const QUANTIZABLE: TrainingArch[] = ['krea2', 'flux2']
+const QUANTIZABLE: TrainingArch[] = ['krea2', 'flux1', 'flux2']
 
 const QUANTS: { value: TrainingBaseQuant; label: string }[] = [
   { value: 'auto', label: 'Auto (fit to this GPU)' },
@@ -94,6 +100,7 @@ const SCOPES: { value: TrainingLoraScope; label: string }[] = [
 const ARCHS: { value: TrainingArch; label: string }[] = [
   { value: 'z-image', label: 'Z-Image' },
   { value: 'krea2', label: 'Krea 2' },
+  { value: 'flux1', label: 'FLUX.1' },
   { value: 'flux2', label: 'FLUX.2' },
   { value: 'minimax-h3', label: 'MiniMax H3 (video)' },
   // "(video)" like H3, not "(video + audio)": the model generates a soundtrack, but training only
@@ -277,6 +284,12 @@ export function TrainerSettingsPanel({ itemId }: { itemId: string }): React.JSX.
         {arch === 'krea2' && (
           <span className="text-[10px] text-zinc-600">
             Train on RAW, then generate with Krea 2 Turbo - the LoRA carries over.
+          </span>
+        )}
+        {arch === 'flux1' && (
+          <span className="text-[10px] text-zinc-600">
+            A 24GB bf16 base, so it trains in 4-bit on most cards. dev's weights are non-commercial,
+            and a LoRA trained on them inherits that.
           </span>
         )}
         {arch === 'flux2' && (

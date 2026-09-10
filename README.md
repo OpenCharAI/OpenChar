@@ -39,7 +39,8 @@ A free, open-source app for AI generation where your characters stay the same. B
 
 | Model                                                                    | Train | Generate | Trains on a 16GB card   |
 | ------------------------------------------------------------------------ | ----- | -------- | ----------------------- |
-| [FLUX.2](https://bfl.ai/blog/flux-2) (klein Base 4B)                     | yes   | yes      | yes, ~8.6GB             |
+| [FLUX.2](https://bfl.ai/blog/flux-2) (klein Base 4B / 9B)                | yes   | yes      | yes, ~8.6GB             |
+| [FLUX.1](https://bfl.ai/blog/flux-1) dev (4-bit)                         | yes   | yes      | yes, ~10.4GB            |
 | [Krea 2](https://www.krea.ai/) (RAW, 4-bit)                              | yes   | yes      | yes, ~11.9GB            |
 | Z-Image Turbo                                                            | yes   | yes      | yes, ~13.4GB            |
 | [MiniMax H3](https://huggingface.co/MiniMaxAI/MiniMax-H3) (video, sound) | yes   | yes      | yes but slowly, ~12.7GB |
@@ -241,6 +242,11 @@ trains on stills for look and style, or on clips to learn motion as well, and on
 both. LTX-2.5 trains on clips, and can also learn a transform between a reference clip and a target
 one, which upstream calls an IC-LoRA.
 
+The image models train on stills. **FLUX.1** trains on dev - it is guidance-distilled rather than
+step-distilled, so it is its own training base and needs no adapter, and 4-bit puts it on a 12GB
+card at 512px. **FLUX.2** trains on a klein Base build, 4B or 9B, and the adapter still loads on the
+distilled build afterwards. **Krea 2** and **Z-Image** are covered in TRAINING.md.
+
 Already installed with `--extra all`? The trainer is ready. Otherwise
 `./webui.sh --install --extra training`.
 
@@ -297,16 +303,22 @@ core/models/
                      krea2_raw_bf16.safetensors          <- Krea 2 RAW (train)
                      flux-2-klein-4b.safetensors         <- FLUX.2 default, Apache 2.0
                      flux-2-klein-base-4b.safetensors    <- FLUX.2 base build, for training
+                     flux-2-klein-base-9b.safetensors    <- FLUX.2 9B base, for training (gated)
+                     flux1-dev.safetensors               <- FLUX.1 dev, generate and train
                      minimax_h3_fl2va_bf16.safetensors   <- H3 text, image, first/last frame
                      minimax_h3_ref2va_bf16.safetensors  <- H3 reference node
                      ltx-2.5-22b-distilled-transformer-bf16.safetensors  <- LTX fast mode
                      ltx-2.5-22b-dev-transformer-bf16.safetensors        <- LTX quality mode, and training
   text_encoders/     qwen3vl_4b_bf16.safetensors         <- Krea 2
                      qwen_3_4b.safetensors               <- FLUX.2 klein 4B, shared with Z-Image
+                     qwen_3_8b.safetensors               <- FLUX.2 klein 9B
+                     t5xxl_fp16.safetensors              <- FLUX.1 sequence encoder
+                     clip_l.safetensors                  <- FLUX.1 pooled encoder
                      MiniMax-H3-text-encoder/            <- Qwen3-VL-32B, a folder
                      MiniMax-H3-processor/
                      gemma4-12b-with-proj-ltx-2.5-bf16.safetensors       <- LTX
   vae/               qwen_image_vae_diffusers.safetensors
+                     ae.safetensors                      <- FLUX.1, the same file Z-Image uses
                      flux2-vae.safetensors
                      minimax_h3_video_vae_fp16.safetensors
                      minimax_h3_audio_vae_fp32.safetensors
@@ -409,10 +421,11 @@ cost nothing to run. Hosted models are billed by the provider.
 **Do I need a GPU?** Not for the canvas, planning, editing or hosted models. Local generation and
 LoRA training need one; see the table at the top.
 
-**Can I train a LoRA locally?** Yes, for all five local models, on your own GPU. See
+**Can I train a LoRA locally?** Yes, for all six local models, on your own GPU. See
 [TRAINING.md](TRAINING.md).
 
-**What models can I run?** Locally: Z-Image Turbo, FLUX.2, Krea 2, MiniMax H3 and LTX-2.5. Hosted:
+**What models can I run?** Locally: Z-Image Turbo, FLUX.1, FLUX.2, Krea 2, MiniMax H3 and
+LTX-2.5. Hosted:
 the fal catalogue, with more providers to follow. Adding a new local model is a Core change, not a
 UI release.
 
@@ -436,7 +449,7 @@ on [Discord](https://discord.gg/cSUS88VdY9), or try the [creator task](task.md).
 - [**ai-toolkit**](https://github.com/ostris/ai-toolkit) by ostris, for the approach to training on a step-distilled model, and the [Z-Image](https://huggingface.co/ostris/zimage_turbo_training_adapter) and [Krea 2](https://huggingface.co/ostris/krea2_turbo_training_adapter) training adapters.
 - [**diffusers**](https://github.com/huggingface/diffusers) for the Krea 2 and MiniMax H3 reference implementations.
 - [**Krea AI**](https://www.krea.ai/) for Krea 2, under the [Krea AI Community License](https://www.krea.ai/krea-2-licensing).
-- [**Black Forest Labs**](https://bfl.ai/blog/flux-2) for FLUX.2: klein 4B, its Base build and the VAE are Apache 2.0; dev and the 9B builds are non-commercial.
+- [**Black Forest Labs**](https://bfl.ai/blog/flux-2) for FLUX.2: klein 4B, its Base build and the VAE are Apache 2.0; dev and the 9B builds are non-commercial. And for [FLUX.1](https://bfl.ai/blog/flux-1) dev, which is non-commercial - a LoRA trained on it inherits that.
 - [**MiniMax**](https://huggingface.co/MiniMaxAI/MiniMax-H3) for MiniMax H3, under the MiniMax H3 Community License.
 - [**Lightricks**](https://huggingface.co/Lightricks/LTX-2.5) for LTX-2.5, under the LTX-2 Community License, and for the [paired dataset pipeline](https://github.com/Lightricks/LTX-2/blob/main/packages/ltx-trainer/docs/dataset-preparation.md) the control LoRA trainer follows.
 

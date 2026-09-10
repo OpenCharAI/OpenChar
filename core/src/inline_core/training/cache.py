@@ -30,6 +30,7 @@ def build(
     dtype: Any,
     resolution: int,
     *,
+    base_mode: str = "raw",
     flip: bool = False,
     dropout: float = 0.0,
     clip_frames: int = 1,
@@ -54,6 +55,13 @@ def build(
         # A motion run caches a different shape of item, so it must not read a clip run's latents.
         "training_mode": training_mode,
     }
+    # Only for a family whose members encode differently: klein 4B and 9B caption through
+    # different-width encoders, so one's cache is the wrong shape for the other. Added rather than
+    # always present because every key here changes the fingerprint, and an arch whose base cannot
+    # vary would re-encode a valid cache for nothing - 19 minutes of it, on H3.
+    base = models.loader_arch(arch, models_dir, base_mode)
+    if base != arch:
+        settings["base"] = base
     say = on_status or (lambda _text: None)
     key = None
     if cache_dir:
@@ -67,8 +75,8 @@ def build(
 
     items, unconditional, shift = _encode(
         dataset_dir, models_dir, arch, device, dtype, resolution,
-        flip=flip, dropout=dropout, clip_frames=clip_frames, clip_window=clip_window,
-        training_mode=training_mode, on_status=on_status,
+        base_mode=base_mode, flip=flip, dropout=dropout, clip_frames=clip_frames,
+        clip_window=clip_window, training_mode=training_mode, on_status=on_status,
     )
     if cache_dir and key is not None:
         store.save(Path(cache_dir), key, items, unconditional, shift)
@@ -83,6 +91,7 @@ def _encode(
     dtype: Any,
     resolution: int,
     *,
+    base_mode: str = "raw",
     flip: bool = False,
     dropout: float = 0.0,
     clip_frames: int = 1,
@@ -108,7 +117,9 @@ def _encode(
         )
         return items, unconditional, _VIDEO_SHIFTS[archs.LTX25]
 
-    encoders = models.load_encoders(models_dir, arch, device, dtype)
+    # Before the encoders, not after: this is the cheap check and they are the expensive load.
+    ds.check_usable(dataset_dir, arch)
+    encoders = models.load_encoders(models_dir, arch, device, dtype, base_mode)
     items = ds.precache(dataset_dir, encoders, arch, device, dtype, resolution, flip=flip)
     unconditional = ds.precache_empty(encoders, arch, device) if dropout > 0 else None
     shift = float(encoders.scheduler.config.get("shift", 1.0) or 1.0)
