@@ -1,34 +1,34 @@
 import { studio } from '@/lib/studio'
-import raceCover from '../../assets/race.png'
+import characterCover from '../../assets/h3-character.jpg'
 
-/** The Circuit Race tutorial URL - a full walkthrough of a generative short film. */
-const CIRCUIT_RACE_URL = 'https://inlinestudio.art/projects/circuit-race'
+/** A published workflow that builds a portable .char from a handful of references. */
+const DEMO_URL =
+  'https://inlinestudio.art/workflows/minimax-h3-consistent-characters-with-references-with-char-model'
 
-/**
- * A "Try a demo" sample card: a cover preview with the title + blurb below it. Opens the
- * Circuit Race tutorial in the browser so a new user can see a complete project end-to-end
- * before building their own.
- */
+/** The "Try a demo" card: opens the consistent-character workflow in the browser. */
 export function DemoSampleCard(): React.JSX.Element {
   return (
     <section className="rounded-xl border border-border bg-surface p-5">
       <h2 className="mb-3 text-sm font-medium text-zinc-300">Try a demo</h2>
       <button
-        onClick={() => void studio().shell.openExternal(CIRCUIT_RACE_URL)}
+        onClick={() => void studio().shell.openExternal(DEMO_URL)}
         className="group block w-full overflow-hidden rounded-lg border border-border bg-panel text-left transition-colors hover:border-accent"
       >
         <div className="aspect-video w-full overflow-hidden bg-panel">
           <img
-            src={raceCover}
-            alt="Circuit Race"
+            src={characterCover}
+            alt="Consistent Character with Minimax H3"
             className="h-full w-full object-cover transition-transform group-hover:scale-[1.02]"
           />
         </div>
         <div className="flex items-center gap-2 p-3">
           <span className="min-w-0 flex-1">
-            <span className="block text-sm font-semibold text-zinc-100">Circuit Race</span>
+            <span className="block text-sm font-semibold text-zinc-100">
+              Consistent Character with Minimax H3
+            </span>
             <span className="block text-xs text-zinc-400">
-              A full walkthrough: storyboard, shots, and assembly of a short film.
+              Drop 2-5 reference images, describe your character, and export a portable .char to use
+              across videos.
             </span>
           </span>
           <ExternalIcon />

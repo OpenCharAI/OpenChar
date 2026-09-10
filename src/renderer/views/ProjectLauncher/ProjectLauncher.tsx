@@ -46,9 +46,11 @@ export function ProjectLauncher(): React.JSX.Element {
           <header className="mb-8 text-center">
             <div className="flex items-center justify-center gap-3">
               <Logo size={44} />
-              <h1 className="text-4xl font-semibold tracking-tight text-white">Inline Studio</h1>
+              <h1 className="text-4xl font-semibold tracking-tight text-white">OpenChar Studio</h1>
             </div>
-            <p className="mt-3 text-sm text-zinc-400">AI filmmaking on a node canvas</p>
+            <p className="mx-auto mt-3 max-w-xl text-sm text-zinc-400">
+              Build multi model consistent characters, train LoRAs, and generate on your own GPU.
+            </p>
           </header>
 
           <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
@@ -154,7 +156,7 @@ export function ProjectLauncher(): React.JSX.Element {
         </button>
 
         <div className="flex items-center gap-3">
-          {currentVersion && <span>Inline Studio v{currentVersion}</span>}
+          {currentVersion && <span>OpenChar v{currentVersion}</span>}
           {updateAvailable && (
             <button
               onClick={() => void openReleases()}
