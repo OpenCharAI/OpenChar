@@ -19,7 +19,7 @@ _os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
 
 import uvicorn
 
-from ..config import data_dir, server_host, server_port
+from ..config import run_data_dir, server_host, server_port
 from ..device.detect import cpu_only_torch_warning, unsupported_arch_warning
 from ..device.memory import MemoryPolicy
 from ..extensions.loader import LoadedExtension
@@ -57,10 +57,11 @@ def main() -> None:
     report_versions(frontend_root)
     policy = MemoryPolicy()
     registry = build_default_registry()
-    data = data_dir()
-    takes = data / "takes"
+    # What runs made and were given, which a shared data dir must not keep for the next user.
+    run_data = run_data_dir()
+    takes = run_data / "takes"
     take_store = FileTakeStore(takes)
-    run_store = SqliteRunStore(data / "runs.db")
+    run_store = SqliteRunStore(run_data / "runs.db")
     # Built before model registration: extensions register their own `ext:<id>:*` channels and
     # push events while they load, so both must already exist.
     rpc = RpcRouter()

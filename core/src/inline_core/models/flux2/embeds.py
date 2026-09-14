@@ -19,7 +19,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from ...config import data_dir
+from ...config import run_data_dir
 from ...device.policy import DevicePolicy
 from .. import pipeline_runtime as rt
 
@@ -31,7 +31,7 @@ _CACHE_LIMIT_BYTES = 2 * 1024**3
 
 
 def _root() -> Path:
-    return data_dir() / "embeds" / "flux2"
+    return run_data_dir() / "embeds" / "flux2"
 
 
 def cache_key(

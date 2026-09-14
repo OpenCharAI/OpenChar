@@ -190,6 +190,7 @@ def test_a_step_with_a_loss_still_wins_over_the_status() -> None:
 
 # --- mid-run snapshots ---
 
+
 def _training(conn: sqlite3.Connection, folder, on_output=None):
     from inline_core.studio.training import Training
 
@@ -375,3 +376,33 @@ def test_a_waiting_run_is_not_mistaken_for_an_orphan(
     training._reconcile_orphans(conn)
 
     assert ts.get_run(conn, second["id"])["status"] == "queued"
+
+
+def test_a_private_lora_folder_keeps_an_export_off_the_shared_models_root(
+    conn: sqlite3.Connection, tmp_path, monkeypatch
+) -> None:
+    """A cloud worker's models root is a volume every other worker mounts. With
+    INLINE_TRAINED_LORAS_DIR set, an adapter lands there instead, and is recorded by absolute path
+    so every reader that joins it onto the models root still finds it."""
+    from inline_core import config
+
+    models = tmp_path / "models"
+    private = tmp_path / "private-loras"
+    monkeypatch.setattr(config, "models_dir", lambda: models)
+    monkeypatch.setattr("inline_core.studio.training.models_dir", lambda: models)
+    monkeypatch.setenv("INLINE_TRAINED_LORAS_DIR", str(private))
+
+    training = _training(conn, tmp_path)
+    _snapshot_files(tmp_path, "run1", [250])
+    result = training.export_snapshot("run1", 250)
+
+    assert result["path"].startswith(str(private))
+    assert (models / result["path"]).is_file()
+    assert not (models / "loras").exists()
+
+
+def test_without_the_setting_a_lora_is_still_recorded_under_loras(monkeypatch) -> None:
+    from inline_core import config
+
+    monkeypatch.delenv("INLINE_TRAINED_LORAS_DIR", raising=False)
+    assert config.lora_output_path("run.safetensors") == "loras/run.safetensors"

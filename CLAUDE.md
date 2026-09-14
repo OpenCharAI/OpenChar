@@ -250,3 +250,16 @@ See `core/CLAUDE.md` for the engine internals (nodes, models, device policy).
   data-driven off it - it appears in the Add-node picker automatically).
 - New generation-engine behaviour → Core (`inline_core/`); new domain entity → `src/shared/types.ts`
   - the Python schema (`inline_core/studio/schema.py`, bump `SCHEMA_VERSION` + migration).
+
+## Security (non-negotiable)
+
+Hold every change to a high security standard, and review it for security before calling it done.
+
+- **Review after each completed task, before reporting it finished.** Go through what the change
+  exposes: secrets, keys or tokens in code, logs, errors or fixtures; validation of anything that
+  arrives from outside (files, network, user input, extension code); injection (SQL, shell, path
+  traversal, HTML); and any new network call, file access or permission. Say what was checked and
+  what was found. Fix it or flag it; never leave a finding unmentioned.
+- **Never expose infrastructure or credentials.** No storage URL, account id, internal host or key
+  in anything shipped to a user or a public page.
+- **Fail closed.** A missing secret or a failed check is a refusal, never a fall-through to allowed.

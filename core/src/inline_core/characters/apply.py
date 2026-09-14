@@ -12,7 +12,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
-from ..config import data_dir
+from ..config import run_data_dir
 from ..takes import AssetRef
 from . import charfile as cf
 from . import encode, library
@@ -131,7 +131,7 @@ _ROLE_BINDINGS = {
 
 
 def _cache_root() -> Path:
-    return data_dir() / "characters"
+    return run_data_dir() / "characters"
 
 
 def char_apply(
