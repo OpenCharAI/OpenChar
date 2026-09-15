@@ -286,6 +286,7 @@ def _load_conditioner(root: Path, device: str, dtype: Any) -> Any:
     from transformers import AutoProcessor, AutoTokenizer, Qwen3VLForConditionalGeneration
 
     from ..models.minimaxh3 import requirements as reqs
+    from ..models.minimaxh3.pipeline import _encoder_source, _is_nvfp4
     from ..models.minimaxh3.vendor import MiniMaxH3ModularPipeline
     from ..models.minimaxh3.vendor.encoders import MiniMaxH3TextEncoderStep
     from . import models
@@ -298,13 +299,16 @@ def _load_conditioner(root: Path, device: str, dtype: Any) -> Any:
             "popup; the conditioner cannot tokenise a caption without them."
         )
 
-    quant, placement = _conditioner_plan(device, encoder_dir)
-    text_encoder = Qwen3VLForConditionalGeneration.from_pretrained(
-        str(encoder_dir),
-        dtype=dtype,
-        local_files_only=True,
-        **({"quantization_config": quant, **placement} if quant is not None else {}),
-    )
+    if _is_nvfp4(encoder_dir):
+        text_encoder = _load_nvfp4_conditioner(encoder_dir, device, dtype)
+    else:
+        quant, placement = _conditioner_plan(device, encoder_dir)
+        text_encoder = Qwen3VLForConditionalGeneration.from_pretrained(
+            str(_encoder_source(encoder_dir)),
+            dtype=dtype,
+            local_files_only=True,
+            **({"quantization_config": quant, **placement} if quant is not None else {}),
+        )
     pipeline = MiniMaxH3ModularPipeline(blocks=MiniMaxH3TextEncoderStep())
     pipeline.update_components(
         text_encoder=text_encoder,
@@ -358,7 +362,30 @@ def _check_conditioner_fits(placement: Any, encoder_dir: Path) -> None:
 
 
 def _folder_bytes(path: Path) -> int:
+    if path.is_file():
+        return path.stat().st_size
     return sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
+
+
+def _load_nvfp4_conditioner(path: Path, device: str, dtype: Any) -> Any:
+    """The file is already 4-bit, so it skips bitsandbytes and goes to the card whole if it fits."""
+    from ..device.memory import MemoryPolicy
+    from ..models import pipeline_runtime as rt
+    from ..models.minimaxh3 import requirements as reqs
+    from ..models.minimaxh3.pipeline import _load_nvfp4_encoder
+
+    need = reqs.encoder_resident_bytes(path) / 1e9
+    free_vram = (rt.free_vram_bytes(device) or 0) / 1e9
+    if free_vram < need + _RAM_HEADROOM_GB:
+        free_ram_mb = MemoryPolicy().free_ram_mb()
+        if free_ram_mb and free_ram_mb / 1024 < need + _RAM_HEADROOM_GB:
+            raise RuntimeError(
+                f"MiniMax H3's nvfp4 text encoder needs about {need:.0f} GB on the card or in "
+                f"system RAM. This machine has {free_vram:.0f} GB free on the card and "
+                f"{free_ram_mb / 1024:.0f} GB of free RAM."
+            )
+    model = _load_nvfp4_encoder(path, dtype)
+    return model.to(device) if free_vram >= need + _RAM_HEADROOM_GB else model
 
 
 def _conditioner_plan(device: str, encoder_dir: Path) -> tuple[Any, dict[str, Any]]:

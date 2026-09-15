@@ -106,7 +106,7 @@ def load_pipeline(
         f"the {partition} transformer",
     )
     encoder_dir = _wired(text_encoder) or _require(
-        reqs.resolve("text_encoders", "MiniMax-H3-text-encoder", params.get("text_encoder")),
+        reqs.resolve_encoder(params.get("text_encoder")),
         "the Qwen3-VL text encoder",
     )
     processor_dir = _require(

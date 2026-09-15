@@ -299,13 +299,12 @@ def components(partition: str = "fl2va", *, fp8_substitutes: bool = True) -> lis
     # A partition needs *a* transformer, not a particular one. Without this a box holding only the
     # fp8 build - the one that fits most cards - was told its 66.3 GB bf16 twin was missing. Off for
     # training, where a pruned fp8 build is not a substitute: it generates, it does not fine-tune.
-    if not fp8_substitutes:
-        return entries
-    pairs = (
-        ("h3-fl2va", "h3-fl2va-fp8"),
-        ("h3-ref2va", "h3-ref2va-fp8"),
+    # Any encoder build also works for training, which only encodes captions with it.
+    pairs: tuple[tuple[str, ...], ...] = (
         ("h3-text-encoder-nvfp4", "h3-text-encoder", "h3-text-encoder-bf16"),
     )
+    if fp8_substitutes:
+        pairs = (("h3-fl2va", "h3-fl2va-fp8"), ("h3-ref2va", "h3-ref2va-fp8"), *pairs)
     return _satisfy_alternatives(entries, pairs)
 
 
@@ -382,8 +381,9 @@ def resident_bytes(path: Path) -> int:
 
 def resolve_encoder(pick: str | None = None) -> Path | None:
     """The conditioner this node would load: an explicit pick, else the smallest build present."""
-    if pick:
-        return resolve("text_encoders", pick)
+    picked = _picked("text_encoders", pick)
+    if picked is not None:
+        return picked
     for name in (ENCODER_NVFP4_FILE, "MiniMax-H3-text-encoder", ENCODER_BF16_FILE):
         found = resolve("text_encoders", name)
         if found is not None:

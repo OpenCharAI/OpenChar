@@ -115,7 +115,7 @@ def _resolve(arch: str, category: str, variant: Any = None) -> Any:
         if category == "vae":
             return h3_reqs.resolve("vae", h3_reqs.VIDEO_VAE_FILE)
         if category == "text_encoders":
-            return h3_reqs.resolve("text_encoders", "MiniMax-H3-text-encoder")
+            return h3_reqs.resolve_encoder()
         # Only fl2va trains: ref2va is the same architecture reached through reference conditioning,
         # so a LoRA learned on one loads on the other.
         return h3_reqs.resolve_transformer("fl2va")

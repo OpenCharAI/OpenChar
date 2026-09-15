@@ -134,3 +134,23 @@ def test_an_fp8_build_never_stands_in_for_training(tmp_path, monkeypatch) -> Non
     assert generation["h3-fl2va"].optional
     training = {c.id: c for c in reqs.components("fl2va", fp8_substitutes=False)}
     assert not training["h3-fl2va"].optional
+
+
+def test_any_h3_text_encoder_build_satisfies_training(tmp_path, monkeypatch) -> None:
+    """Pre-flight asked for the nvfp4 file and the trainer only loaded the folder, so a user with
+    either one was blocked."""
+    from inline_core.models.minimaxh3 import requirements as reqs
+    from inline_core.training import models as train_models
+
+    monkeypatch.setenv("INLINE_MODELS_DIR", str(tmp_path))
+    encoders = tmp_path / "text_encoders"
+    encoders.mkdir(parents=True)
+    (encoders / reqs.ENCODER_NVFP4_FILE).write_bytes(b"x")
+    resolved = train_models._resolve("minimax-h3", "text_encoders")
+    assert resolved == encoders / reqs.ENCODER_NVFP4_FILE
+
+    (encoders / reqs.ENCODER_NVFP4_FILE).unlink()
+    (encoders / "MiniMax-H3-text-encoder").mkdir()
+    assert ("text_encoders", reqs.ENCODER_NVFP4_FILE) not in _files("minimax-h3")
+    resolved = train_models._resolve("minimax-h3", "text_encoders")
+    assert resolved == encoders / "MiniMax-H3-text-encoder"

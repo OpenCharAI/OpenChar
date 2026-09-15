@@ -425,6 +425,17 @@ def test_the_folder_components_declare_a_repo_folder(models_root: Path) -> None:
     assert not by_id["h3-fl2va"].is_folder and by_id["h3-fl2va"].repo_file.endswith(".safetensors")
 
 
+def test_the_default_nvfp4_encoder_is_found_without_a_pick(models_root: Path) -> None:
+    """The popup downloads the nvfp4 file by default, so the node has to find it without a pick."""
+    encoders = models_root / "text_encoders"
+    encoders.mkdir()
+    (encoders / reqs.ENCODER_NVFP4_FILE).write_bytes(b"x")
+    assert reqs.resolve_encoder() == encoders / reqs.ENCODER_NVFP4_FILE
+    assert MiniMaxH3Provider().resolved()["text_encoder"] == reqs.ENCODER_NVFP4_FILE
+    # A pick whose file is gone falls back to the encoder on disk.
+    assert reqs.resolve_encoder("gone.safetensors") == encoders / reqs.ENCODER_NVFP4_FILE
+
+
 def test_provenance_survives_a_rename(models_root: Path) -> None:
     """The two partitions are indistinguishable by inspection, so this is the only record."""
     renamed = _fake_checkpoint(

@@ -41,7 +41,7 @@ class MiniMaxH3Provider:
         """What this node would load now, so the pickers show real files rather than "auto"."""
         picks = {
             "model": reqs.resolve_transformer(self._partition),
-            "text_encoder": reqs.resolve("text_encoders", "MiniMax-H3-text-encoder"),
+            "text_encoder": reqs.resolve_encoder(),
             "vae": reqs.resolve("vae", reqs.VIDEO_VAE_FILE),
         }
         return {key: Path(str(value)).name for key, value in picks.items() if value}
