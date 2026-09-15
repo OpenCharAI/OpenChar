@@ -754,19 +754,20 @@ def create_app(
         async def download_lora(run_id: str) -> Response:
             # Stream a finished run's LoRA as an attachment. The browser has no filesystem, so
             # "copy the path" is useless there - a download is the only way to get the file out.
-            from ..config import models_dir
+            from ..config import models_dir, trained_loras_dir
             from ..studio import training_store as ts
 
             try:
                 run = ts.get_run(studio_store.conn(), run_id)
             except Exception:  # noqa: BLE001 - an unknown run id is a 404, not a 500
                 return Response("Not found", status_code=404)
-            rel = (run.get("outputLoraPath") or "").lstrip("/") if run else ""
-            if not rel:
+            recorded = (run.get("outputLoraPath") or "") if run else ""
+            if not recorded:
                 return Response("This run has no LoRA file yet", status_code=404)
-            root = (models_dir() / "loras").resolve()
-            target = (models_dir() / rel).resolve()
-            if root != target.parent:  # only files directly under loras/, no traversal
+            # Relative to the models root, or absolute when INLINE_TRAINED_LORAS_DIR moved it.
+            root = trained_loras_dir().resolve()
+            target = (models_dir() / recorded).resolve()
+            if root != target.parent:  # only files directly in the LoRA folder, no traversal
                 return Response("Forbidden", status_code=403)
             if not target.is_file():
                 return Response("Not found", status_code=404)

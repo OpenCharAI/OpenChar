@@ -40,11 +40,36 @@ def data_dir() -> Path:
     return Path(env).expanduser() if env else Path(".inline")
 
 
+def run_data_dir() -> Path:
+    """Takes, the run database and caches built from what runs were given. `INLINE_RUN_DATA_DIR`."""
+    # Apart from the data dir, whose fetched model configs a cloud volume shares on purpose; else same.
+    env = os.environ.get("INLINE_RUN_DATA_DIR")
+    return Path(env).expanduser() if env else data_dir()
+
+
 def assets_dir() -> Path:
     """Where `POST /v1/assets` stores uploads. `INLINE_ASSET_DIR`, else `./.inline-assets`."""
     # A knob of its own so callers' uploads can stay off a data dir that other workers share.
     env = os.environ.get("INLINE_ASSET_DIR")
     return Path(env).expanduser() if env else Path(".inline-assets")
+
+
+def trained_loras_dir() -> Path:
+    """Where training writes a LoRA. `INLINE_TRAINED_LORAS_DIR`, else `<models dir>/loras`."""
+    # Separate for the same reason as characters: on a shared root one user's LoRA is everyone's.
+    env = os.environ.get("INLINE_TRAINED_LORAS_DIR")
+    return Path(env).expanduser() if env else models_dir() / "loras"
+
+
+def lora_output_path(file_name: str) -> str:
+    """How a trained LoRA is recorded: `loras/<file>` under the models root, or absolute elsewhere.
+
+    Every reader joins this onto the models root, and joining an absolute path yields that path, so
+    a LoRA kept outside the root resolves without any reader knowing where it went.
+    """
+    if os.environ.get("INLINE_TRAINED_LORAS_DIR"):
+        return str(trained_loras_dir() / file_name)
+    return f"loras/{file_name}"
 
 
 def characters_dir() -> Path:

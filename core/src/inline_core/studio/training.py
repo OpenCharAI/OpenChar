@@ -6,7 +6,9 @@ denoise loop). ``start`` writes the dataset to a working dir + a manifest, launc
 ``python -m inline_core.training <manifest>`` (or ``accelerate launch --multi_gpu`` for 2+ GPUs),
 and returns immediately; the subprocess emits JSON-line progress that this class parses, mirrors
 into the durable ``training_runs`` row, and broadcasts. The produced ``.safetensors`` is written
-into ``models_dir()/loras/`` so it shows in the LoRA loader node's dropdown - no loader changes.
+into ``models_dir()/loras/`` so it shows in the LoRA loader node's dropdown, or into
+``INLINE_TRAINED_LORAS_DIR`` when set, so a worker on a shared models root keeps one user's adapter
+off everyone's list.
 """
 
 from __future__ import annotations
@@ -24,7 +26,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
-from ..config import models_dir
+from ..config import lora_output_path, models_dir, trained_loras_dir
 from ..training.dataset import (
     is_reference_name,
     reference_for_name,
@@ -55,14 +57,15 @@ def _safe(name: str) -> str:
 
 
 def _unique_lora_name(loras: Path, stem: str) -> str:
-    """`loras/<stem>.safetensors`, suffixed -2, -3… if that file already exists. Retraining under
-    the same name shouldn't silently overwrite a LoRA the user may already be generating with."""
+    """`<stem>.safetensors` as recorded (see `lora_output_path`), suffixed -2, -3… if that file
+    already exists. Retraining under the same name shouldn't silently overwrite a LoRA the user may
+    already be generating with."""
     if not (loras / f"{stem}.safetensors").exists():
-        return f"loras/{stem}.safetensors"
+        return lora_output_path(f"{stem}.safetensors")
     for n in range(2, 1000):
         if not (loras / f"{stem}-{n}.safetensors").exists():
-            return f"loras/{stem}-{n}.safetensors"
-    return f"loras/{stem}-{uuid.uuid4().hex[:6]}.safetensors"
+            return lora_output_path(f"{stem}-{n}.safetensors")
+    return lora_output_path(f"{stem}-{uuid.uuid4().hex[:6]}.safetensors")
 
 
 class Training:
@@ -604,7 +607,7 @@ class Training:
             }
             # Report the export if it is already there, or a reload offers "Add to models" on a
             # snapshot that was auto-exported and makes a second copy under a -2 name.
-            exported = f"loras/{name}-step{step}.safetensors"
+            exported = lora_output_path(f"{name}-step{step}.safetensors")
             if (models_dir() / exported).is_file():
                 row["loraPath"] = exported
             out.append(row)
@@ -624,7 +627,7 @@ class Training:
     def _copy_to_loras(self, run_id: str, source: Path, step: int) -> str:
         """Place one snapshot in ``models/loras/`` and make the picker aware of it."""
         run = self._lookup(run_id) or {}
-        loras = models_dir() / "loras"
+        loras = trained_loras_dir()
         loras.mkdir(parents=True, exist_ok=True)
         stem = f"{_safe(str(run.get('name') or run_id))}-step{step}"
         rel = _unique_lora_name(loras, stem)
@@ -842,7 +845,7 @@ class Training:
                 ref_dest = reference_path_for(dest.with_suffix(ref_src.suffix.lower()))
                 shutil.copyfile(ref_src, ref_dest)
 
-        loras = models_dir() / "loras"
+        loras = trained_loras_dir()
         loras.mkdir(parents=True, exist_ok=True)
         # A user-chosen name wins; otherwise fall back to "<run name>-<short id>". The run id keeps
         # the fallback unique, but a chosen name is used verbatim so the file is findable in the
@@ -851,7 +854,7 @@ class Training:
         if chosen and chosen != "lora":
             output_rel = _unique_lora_name(loras, chosen)
         else:
-            output_rel = f"loras/{_safe(run['name'])}-{run_id[:8]}.safetensors"
+            output_rel = lora_output_path(f"{_safe(run['name'])}-{run_id[:8]}.safetensors")
         resume_from = str(checkpoint_dir) if resume else None
         manifest = {
             "runId": run_id,

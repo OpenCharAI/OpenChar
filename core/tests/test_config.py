@@ -53,3 +53,32 @@ def test_characters_dir_defaults_under_the_models_root_and_reads_env(
     assert characters_dir() == Path("/m/characters")
     monkeypatch.setenv("INLINE_CHARACTERS_DIR", "/opt/run/characters")
     assert characters_dir() == Path("/opt/run/characters")
+
+
+def test_run_data_dir_defaults_to_the_data_dir_and_reads_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A cloud volume shares the data dir for its fetched model configs, so takes, the run database
+    and per-run caches need a place of their own; without the setting nothing moves."""
+    from pathlib import Path
+
+    from inline_core.config import run_data_dir
+
+    monkeypatch.setenv("INLINE_DATA_DIR", "/d")
+    monkeypatch.delenv("INLINE_RUN_DATA_DIR", raising=False)
+    assert run_data_dir() == Path("/d")
+    monkeypatch.setenv("INLINE_RUN_DATA_DIR", "/opt/run/data")
+    assert run_data_dir() == Path("/opt/run/data")
+
+
+def test_per_run_caches_follow_the_run_data_dir(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The character payload cache and prompt embeddings are built from what a person gave a run."""
+    from pathlib import Path
+
+    from inline_core.characters import apply
+    from inline_core.models.flux2 import embeds
+
+    monkeypatch.setenv("INLINE_DATA_DIR", "/shared")
+    monkeypatch.setenv("INLINE_RUN_DATA_DIR", "/private")
+    assert apply._cache_root() == Path("/private/characters")
+    assert embeds._root() == Path("/private/embeds/flux2")

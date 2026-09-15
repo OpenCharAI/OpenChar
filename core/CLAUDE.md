@@ -152,6 +152,10 @@ between nodes and are never takes.
   are written, and searched first when one is resolved. Point it off a shared models root (a cloud
   worker's pod disk) so one user's characters are not everyone's. The `/v1/models` picker still
   scans only the models roots.
+- **Trained LoRAs dir** - `INLINE_TRAINED_LORAS_DIR`, else `<models root>/loras`. Where a finished
+  training run and an exported snapshot are written. When set, the run records the absolute path,
+  which every reader joins onto the models root unchanged. Point it off a shared models root for the
+  same reason as characters; a LoRA written there is then not in the loader dropdown.
 - **Server bind** - `INLINE_HOST` (default `127.0.0.1`), `INLINE_PORT` (default `8848`).
 - **Model overrides** - e.g. `INLINE_ZIMAGE_MODEL` (a single `.safetensors` file path, a local
   diffusers dir, or a HF repo id for Z-Image). Auto-resolved from `diffusion_models/` when unset.

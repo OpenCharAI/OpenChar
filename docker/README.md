@@ -75,6 +75,7 @@ JupyterLab and the file browser print a generated password to the container log 
 | `INLINE_DATA_DIR`             | `/workspace/.inline`           | run database and generated takes                    |
 | `INLINE_ASSET_DIR`            | `/workspace/.inline-assets`    | uploads from `POST /v1/assets`                      |
 | `INLINE_CHARACTERS_DIR`       | `/workspace/models/characters` | where saved `.char` characters are written          |
+| `INLINE_TRAINED_LORAS_DIR`    | `/workspace/models/loras`      | where a finished training run writes its LoRA       |
 | `INLINE_EXTENSIONS_DIR`       | `/workspace/extensions`        | installed community extensions                      |
 | `INLINE_STUDIO_DATA_DIR`      | `/workspace/inline-studio`     | recents, settings, saved fal key                    |
 | `INLINE_STUDIO_WORKSPACE_DIR` | `/workspace/projects`          | your `.inlinestudio` project folders                |

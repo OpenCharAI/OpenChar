@@ -73,3 +73,33 @@ def test_path_traversal_is_refused(client) -> None:
     # A run whose stored path tries to escape loras/ must not serve an arbitrary file.
     run_id = _finished_run(store, "loras/../../secret.txt")
     assert c.get(f"/download/lora/{run_id}").status_code in (403, 404)
+
+
+def test_a_lora_in_the_private_folder_downloads(client, tmp_path, monkeypatch) -> None:
+    """A worker that keeps trained adapters off its shared models root records them by absolute
+    path; the route serves from that folder instead of models/loras."""
+    c, store, _models = client
+    private = tmp_path / "private-loras"
+    private.mkdir()
+    monkeypatch.setenv("INLINE_TRAINED_LORAS_DIR", str(private))
+    c.post("/rpc", json={"channel": "project:create", "args": [{"name": "F", "parentDir": None}]})
+
+    (private / "my-run.safetensors").write_bytes(b"PRIVATE")
+    run_id = _finished_run(store, str(private / "my-run.safetensors"))
+
+    res = c.get(f"/download/lora/{run_id}")
+    assert res.status_code == 200
+    assert res.content == b"PRIVATE"
+
+
+def test_the_private_folder_does_not_widen_what_can_be_read(client, tmp_path, monkeypatch) -> None:
+    c, store, models = client
+    private = tmp_path / "private-loras"
+    private.mkdir()
+    monkeypatch.setenv("INLINE_TRAINED_LORAS_DIR", str(private))
+    c.post("/rpc", json={"channel": "project:create", "args": [{"name": "F", "parentDir": None}]})
+
+    # A recorded path outside the configured folder, even one under models/loras, is not served.
+    (models / "loras" / "someone-else.safetensors").write_bytes(b"NOT YOURS")
+    run_id = _finished_run(store, "loras/someone-else.safetensors")
+    assert c.get(f"/download/lora/{run_id}").status_code in (403, 404)
