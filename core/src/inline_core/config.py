@@ -42,7 +42,7 @@ def data_dir() -> Path:
 
 def run_data_dir() -> Path:
     """Takes, the run database and caches built from what runs were given. `INLINE_RUN_DATA_DIR`."""
-    # Apart from the data dir, whose fetched model configs a cloud volume shares on purpose; else same.
+    # Apart from the data dir, whose model configs a cloud volume shares on purpose; else the same.
     env = os.environ.get("INLINE_RUN_DATA_DIR")
     return Path(env).expanduser() if env else data_dir()
 

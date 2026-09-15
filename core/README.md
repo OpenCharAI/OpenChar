@@ -212,7 +212,8 @@ Working data (the run database and takes) lives in `INLINE_DATA_DIR` (default `.
 Uploads from `POST /v1/assets` live in `INLINE_ASSET_DIR` (default `./.inline-assets`); a graph
 refers to one as `{"ref": "asset", "id": "sha256-..."}` on an `input/image` or `input/video`
 node. Saved characters are written to `INLINE_CHARACTERS_DIR` (default `<models dir>/characters`),
-and trained LoRAs to `INLINE_TRAINED_LORAS_DIR` (default `<models dir>/loras`).
+and trained LoRAs to `INLINE_TRAINED_LORAS_DIR` (default `<models dir>/loras`). Takes, the run
+database and per-run caches live in `INLINE_RUN_DATA_DIR` (default the data dir).
 
 ## API (v1)
 
