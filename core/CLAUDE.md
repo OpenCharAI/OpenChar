@@ -152,6 +152,9 @@ between nodes and are never takes.
   are written, and searched first when one is resolved. Point it off a shared models root (a cloud
   worker's pod disk) so one user's characters are not everyone's. The `/v1/models` picker still
   scans only the models roots.
+- **Run data dir** - `INLINE_RUN_DATA_DIR`, else the data dir. Takes, `runs.db`, the character
+  payload cache and FLUX.2 prompt embeddings: everything built from what a run was given. Point it
+  off a shared data dir, which a cloud volume keeps for its fetched model configs.
 - **Trained LoRAs dir** - `INLINE_TRAINED_LORAS_DIR`, else `<models root>/loras`. Where a finished
   training run and an exported snapshot are written. When set, the run records the absolute path,
   which every reader joins onto the models root unchanged. Point it off a shared models root for the

@@ -72,7 +72,8 @@ JupyterLab and the file browser print a generated password to the container log 
 | Variable                      | Default                        | What it does                                        |
 | ----------------------------- | ------------------------------ | --------------------------------------------------- |
 | `INLINE_MODELS_DIR`           | `/workspace/models`            | where weights are scanned from and downloaded to    |
-| `INLINE_DATA_DIR`             | `/workspace/.inline`           | run database and generated takes                    |
+| `INLINE_DATA_DIR`             | `/workspace/.inline`           | fetched model configs and caches                    |
+| `INLINE_RUN_DATA_DIR`         | `INLINE_DATA_DIR`              | run database, generated takes, per-run caches       |
 | `INLINE_ASSET_DIR`            | `/workspace/.inline-assets`    | uploads from `POST /v1/assets`                      |
 | `INLINE_CHARACTERS_DIR`       | `/workspace/models/characters` | where saved `.char` characters are written          |
 | `INLINE_TRAINED_LORAS_DIR`    | `/workspace/models/loras`      | where a finished training run writes its LoRA       |
