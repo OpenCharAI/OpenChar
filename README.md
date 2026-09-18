@@ -1,8 +1,8 @@
 <div align="center">
 
-# OpenChar Studio
+# Omnichar Studio
 
-**Consistent AI characters on a node canvas.**
+**Open-source studio for AI characters. One portable .char, working across every model.**
 
 A free, open-source app for AI generation where your characters stay the same. Build a character once and keep the same face across shots and models, generate locally on your own GPU or with hosted models, train your own LoRAs, and keep every render as a versioned take.
 
