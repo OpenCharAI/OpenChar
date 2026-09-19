@@ -43,6 +43,7 @@ HOST_PROTECTED: frozenset[str] = frozenset(
         "nvidia-ml-py",
         "inline-core",
         "openchar-core",
+        "omnichar-core",
     }
 )
 

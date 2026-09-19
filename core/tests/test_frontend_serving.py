@@ -13,7 +13,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from inline_core.server.app import _WEB_MIME_TYPES, create_app
-from inline_core.server.frontend import resolve_frontend_root
+from inline_core.server.frontend import FRONTEND_MODULES, resolve_frontend_root
 
 
 def _spa(tmp_path):
@@ -39,7 +39,7 @@ def test_resolve_none_when_dir_has_no_index(monkeypatch, tmp_path):
 
 
 def _without_frontend_package(monkeypatch):
-    """Make ``import openchar_frontend`` fail, whether or not it is installed here.
+    """Make ``import omnichar_frontend`` fail, whether or not it is installed here.
 
     The package ships in the published wheel and is absent from a bare dev checkout, so asserting
     on the ambient environment tests the machine rather than the resolver.
@@ -47,19 +47,20 @@ def _without_frontend_package(monkeypatch):
     real_import = builtins.__import__
 
     def _blocked(name, *args, **kwargs):
-        if name == "openchar_frontend":
+        if name in FRONTEND_MODULES:
             raise ModuleNotFoundError(f"No module named {name!r}")
         return real_import(name, *args, **kwargs)
 
-    monkeypatch.delitem(sys.modules, "openchar_frontend", raising=False)
+    for name in FRONTEND_MODULES:
+        monkeypatch.delitem(sys.modules, name, raising=False)
     monkeypatch.setattr(builtins, "__import__", _blocked)
 
 
-def _with_frontend_package(monkeypatch, static: Path):
+def _with_frontend_package(monkeypatch, static: Path, name: str = "omnichar_frontend"):
     """Stand in for the installed package, rooted at ``static``'s parent."""
-    module = types.ModuleType("openchar_frontend")
+    module = types.ModuleType(name)
     module.__file__ = str(static.parent / "__init__.py")
-    monkeypatch.setitem(sys.modules, "openchar_frontend", module)
+    monkeypatch.setitem(sys.modules, name, module)
 
 
 def test_resolve_none_when_unset_and_package_absent(monkeypatch):
@@ -137,3 +138,14 @@ def test_create_app_pins_every_web_mime_type(tmp_path, hostile_host_mime_table):
     create_app(frontend_root=str(_spa(tmp_path)))
     for ext, mime in _WEB_MIME_TYPES:
         assert mimetypes.guess_type(f"asset{ext}")[0] == mime
+
+
+def test_resolve_still_finds_the_pre_rename_package(monkeypatch, tmp_path):
+    """The wheel was renamed; an install that predates it must not silently lose its UI."""
+    monkeypatch.delenv("INLINE_FRONTEND_ROOT", raising=False)
+    static = tmp_path / "old" / "static"
+    static.mkdir(parents=True)
+    (static / "index.html").write_text("<!doctype html><title>OmniChar</title>")
+    monkeypatch.delitem(sys.modules, "omnichar_frontend", raising=False)
+    _with_frontend_package(monkeypatch, static, name="openchar_frontend")
+    assert resolve_frontend_root() == str(static)

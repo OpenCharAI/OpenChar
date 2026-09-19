@@ -20,10 +20,10 @@ plus closed models via fal.ai.
 > | The `inline_core` Python module and `core/src/inline_core/` | The import path users and extensions already depend on.                                                           |
 > | `.inlinestudio` project folders                             | On-disk data in the wild; renaming orphans people's projects.                                                     |
 > | `inlinestudio.art`                                          | The live domain.                                                                                                  |
-> | `"name": "inline-studio"` in `package.json`                 | Nothing is published to npm - this package builds the SPA, which ships inside the `openchar-frontend` PyPI wheel. |
+> | `"name": "inline-studio"` in `package.json`                 | Nothing is published to npm - this package builds the SPA, which ships inside the `omnichar-frontend` PyPI wheel. |
 >
 > What **has** been renamed: the product name, the GitHub org, this repo, and the PyPI packages
-> (`openchar-core`, `openchar-frontend`).
+> (`omnichar-core`, `omnichar-frontend`).
 >
 > OpenChar Studio is the **single repo**: it holds the UI client (`src/`) **and** the **Inline Core**
 > Python generation engine (`core/`, brought in via `git subtree`). One process serves both -
@@ -127,7 +127,7 @@ src/
     store/              Zustand stores (moodboardStore, frameStore, generationStore, ...)
     views/              feature-foldered screens (ProjectLauncher, Workspace, Moodboard, Library, ...)
     components/         shared UI
-vite.config.spa.ts      builds the SPA -> dist-web/ (the openchar_frontend PyPI wheel payload)
+vite.config.spa.ts      builds the SPA -> dist-web/ (the omnichar_frontend PyPI wheel payload)
 ```
 
 ### Storage - a portable project folder (owned by Core)

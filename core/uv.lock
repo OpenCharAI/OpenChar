@@ -609,151 +609,6 @@ wheels = [
 ]
 
 [[package]]
-name = "inline-core"
-version = "1.3.14"
-source = { editable = "." }
-dependencies = [
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "numpy", version = "2.5.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "psutil" },
-]
-
-[package.optional-dependencies]
-all = [
-    { name = "accelerate" },
-    { name = "av" },
-    { name = "bitsandbytes", marker = "sys_platform != 'darwin'" },
-    { name = "cloudpickle" },
-    { name = "controlnet-aux" },
-    { name = "diffusers" },
-    { name = "einops" },
-    { name = "fastapi" },
-    { name = "huggingface-hub" },
-    { name = "imageio-ffmpeg" },
-    { name = "nvidia-ml-py" },
-    { name = "onnxruntime" },
-    { name = "openimageio" },
-    { name = "peft" },
-    { name = "pillow" },
-    { name = "psutil" },
-    { name = "safetensors" },
-    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "scipy", version = "1.18.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "timm" },
-    { name = "torch", version = "2.13.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'win32'" },
-    { name = "torch", version = "2.13.0+cu126", source = { registry = "https://download.pytorch.org/whl/cu126" }, marker = "sys_platform == 'win32'" },
-    { name = "torchao" },
-    { name = "torchaudio" },
-    { name = "transformers" },
-    { name = "uvicorn", extra = ["standard"] },
-]
-dev = [
-    { name = "httpx" },
-    { name = "pyright" },
-    { name = "pytest" },
-    { name = "ruff" },
-]
-parallel = [
-    { name = "nvidia-ml-py" },
-    { name = "xfuser" },
-]
-runtime = [
-    { name = "accelerate" },
-    { name = "av" },
-    { name = "cloudpickle" },
-    { name = "controlnet-aux" },
-    { name = "diffusers" },
-    { name = "einops" },
-    { name = "huggingface-hub" },
-    { name = "onnxruntime" },
-    { name = "openimageio" },
-    { name = "safetensors" },
-    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "scipy", version = "1.18.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "torch", version = "2.13.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'win32'" },
-    { name = "torch", version = "2.13.0+cu126", source = { registry = "https://download.pytorch.org/whl/cu126" }, marker = "sys_platform == 'win32'" },
-    { name = "torchao" },
-    { name = "torchaudio" },
-    { name = "transformers" },
-]
-server = [
-    { name = "fastapi" },
-    { name = "imageio-ffmpeg" },
-    { name = "uvicorn", extra = ["standard"] },
-]
-training = [
-    { name = "bitsandbytes", marker = "sys_platform != 'darwin'" },
-    { name = "nvidia-ml-py" },
-    { name = "peft" },
-    { name = "pillow" },
-    { name = "psutil" },
-    { name = "timm" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "accelerate", marker = "extra == 'all'", specifier = ">=0.30" },
-    { name = "accelerate", marker = "extra == 'runtime'", specifier = ">=0.30" },
-    { name = "av", marker = "extra == 'all'", specifier = ">=12" },
-    { name = "av", marker = "extra == 'runtime'", specifier = ">=12" },
-    { name = "bitsandbytes", marker = "sys_platform != 'darwin' and extra == 'all'", specifier = ">=0.43" },
-    { name = "bitsandbytes", marker = "sys_platform != 'darwin' and extra == 'training'", specifier = ">=0.43" },
-    { name = "cloudpickle", marker = "extra == 'all'", specifier = ">=3.1" },
-    { name = "cloudpickle", marker = "extra == 'runtime'", specifier = ">=3.1" },
-    { name = "controlnet-aux", marker = "extra == 'all'", specifier = ">=0.0.7" },
-    { name = "controlnet-aux", marker = "extra == 'runtime'", specifier = ">=0.0.7" },
-    { name = "diffusers", marker = "extra == 'all'", specifier = "==0.39.0" },
-    { name = "diffusers", marker = "extra == 'runtime'", specifier = "==0.39.0" },
-    { name = "einops", marker = "extra == 'all'", specifier = ">=0.7" },
-    { name = "einops", marker = "extra == 'runtime'", specifier = ">=0.7" },
-    { name = "fastapi", marker = "extra == 'all'", specifier = ">=0.110" },
-    { name = "fastapi", marker = "extra == 'server'", specifier = ">=0.110" },
-    { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27" },
-    { name = "huggingface-hub", marker = "extra == 'all'", specifier = ">=0.32" },
-    { name = "huggingface-hub", marker = "extra == 'runtime'", specifier = ">=0.32" },
-    { name = "imageio-ffmpeg", marker = "extra == 'all'", specifier = ">=0.4" },
-    { name = "imageio-ffmpeg", marker = "extra == 'server'", specifier = ">=0.4" },
-    { name = "numpy", specifier = ">=1.26" },
-    { name = "nvidia-ml-py", marker = "extra == 'all'", specifier = ">=12" },
-    { name = "nvidia-ml-py", marker = "extra == 'parallel'", specifier = ">=12" },
-    { name = "nvidia-ml-py", marker = "extra == 'training'", specifier = ">=12" },
-    { name = "onnxruntime", marker = "extra == 'all'", specifier = ">=1.17" },
-    { name = "onnxruntime", marker = "extra == 'runtime'", specifier = ">=1.17" },
-    { name = "openimageio", marker = "extra == 'all'", specifier = ">=3.0" },
-    { name = "openimageio", marker = "extra == 'runtime'", specifier = ">=3.0" },
-    { name = "peft", marker = "extra == 'all'", specifier = ">=0.11" },
-    { name = "peft", marker = "extra == 'training'", specifier = ">=0.11" },
-    { name = "pillow", marker = "extra == 'all'", specifier = ">=10" },
-    { name = "pillow", marker = "extra == 'training'", specifier = ">=10" },
-    { name = "psutil", specifier = ">=5.9" },
-    { name = "psutil", marker = "extra == 'all'", specifier = ">=5.9" },
-    { name = "psutil", marker = "extra == 'training'", specifier = ">=5.9" },
-    { name = "pyright", marker = "extra == 'dev'", specifier = ">=1.1" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6" },
-    { name = "safetensors", marker = "extra == 'all'", specifier = ">=0.4" },
-    { name = "safetensors", marker = "extra == 'runtime'", specifier = ">=0.4" },
-    { name = "scipy", marker = "extra == 'all'", specifier = ">=1.11" },
-    { name = "scipy", marker = "extra == 'runtime'", specifier = ">=1.11" },
-    { name = "timm", marker = "extra == 'all'", specifier = ">=1.0" },
-    { name = "timm", marker = "extra == 'training'", specifier = ">=1.0" },
-    { name = "torch", marker = "sys_platform == 'win32' and extra == 'all'", specifier = ">=2.2", index = "https://download.pytorch.org/whl/cu126" },
-    { name = "torch", marker = "sys_platform == 'win32' and extra == 'runtime'", specifier = ">=2.2", index = "https://download.pytorch.org/whl/cu126" },
-    { name = "torch", marker = "sys_platform != 'win32' and extra == 'all'", specifier = ">=2.2" },
-    { name = "torch", marker = "sys_platform != 'win32' and extra == 'runtime'", specifier = ">=2.2" },
-    { name = "torchao", marker = "extra == 'all'", specifier = ">=0.14" },
-    { name = "torchao", marker = "extra == 'runtime'", specifier = ">=0.14" },
-    { name = "torchaudio", marker = "extra == 'all'" },
-    { name = "torchaudio", marker = "extra == 'runtime'" },
-    { name = "transformers", marker = "extra == 'all'", specifier = ">=5.8,<5.15" },
-    { name = "transformers", marker = "extra == 'runtime'", specifier = ">=5.8,<5.15" },
-    { name = "uvicorn", extras = ["standard"], marker = "extra == 'all'", specifier = ">=0.29" },
-    { name = "uvicorn", extras = ["standard"], marker = "extra == 'server'", specifier = ">=0.29" },
-    { name = "xfuser", marker = "extra == 'parallel'", specifier = ">=0.4" },
-]
-provides-extras = ["runtime", "server", "parallel", "training", "dev", "all"]
-
-[[package]]
 name = "jinja2"
 version = "3.1.6"
 source = { registry = "https://pypi.org/simple" }
@@ -1197,6 +1052,155 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/c2/f3/d86c845465a2723ad7e1e5c36dcd75ddb82898b3f53be47ebd429fb2fa5d/nvidia_nvtx-13.0.85-py3-none-manylinux1_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:4936d1d6780fbe68db454f5e72a42ff64d1fd6397df9f363ae786930fd5c1cd4", size = 148047, upload-time = "2025-09-04T08:29:01.761Z" },
     { url = "https://files.pythonhosted.org/packages/a8/64/3708a90d1ebe202ffdeb7185f878a3c84d15c2b2c31858da2ce0583e2def/nvidia_nvtx-13.0.85-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:cb7780edb6b14107373c835bf8b72e7a178bac7367e23da7acb108f973f157a6", size = 148878, upload-time = "2025-09-04T08:28:53.627Z" },
 ]
+
+[[package]]
+name = "omnichar-core"
+version = "1.3.23"
+source = { editable = "." }
+dependencies = [
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "psutil" },
+]
+
+[package.optional-dependencies]
+all = [
+    { name = "accelerate" },
+    { name = "av" },
+    { name = "bitsandbytes", marker = "sys_platform != 'darwin'" },
+    { name = "cloudpickle" },
+    { name = "controlnet-aux" },
+    { name = "diffusers" },
+    { name = "einops" },
+    { name = "fastapi" },
+    { name = "huggingface-hub" },
+    { name = "imageio-ffmpeg" },
+    { name = "nvidia-ml-py" },
+    { name = "onnxruntime" },
+    { name = "openimageio" },
+    { name = "peft" },
+    { name = "pillow" },
+    { name = "psutil" },
+    { name = "safetensors" },
+    { name = "scalar-fastapi" },
+    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "scipy", version = "1.18.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "timm" },
+    { name = "torch", version = "2.13.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'win32'" },
+    { name = "torch", version = "2.13.0+cu126", source = { registry = "https://download.pytorch.org/whl/cu126" }, marker = "sys_platform == 'win32'" },
+    { name = "torchao" },
+    { name = "torchaudio" },
+    { name = "transformers" },
+    { name = "uvicorn", extra = ["standard"] },
+]
+dev = [
+    { name = "httpx" },
+    { name = "pyright" },
+    { name = "pytest" },
+    { name = "ruff" },
+]
+parallel = [
+    { name = "nvidia-ml-py" },
+    { name = "xfuser" },
+]
+runtime = [
+    { name = "accelerate" },
+    { name = "av" },
+    { name = "cloudpickle" },
+    { name = "controlnet-aux" },
+    { name = "diffusers" },
+    { name = "einops" },
+    { name = "huggingface-hub" },
+    { name = "onnxruntime" },
+    { name = "openimageio" },
+    { name = "safetensors" },
+    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "scipy", version = "1.18.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "torch", version = "2.13.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'win32'" },
+    { name = "torch", version = "2.13.0+cu126", source = { registry = "https://download.pytorch.org/whl/cu126" }, marker = "sys_platform == 'win32'" },
+    { name = "torchao" },
+    { name = "torchaudio" },
+    { name = "transformers" },
+]
+server = [
+    { name = "fastapi" },
+    { name = "imageio-ffmpeg" },
+    { name = "scalar-fastapi" },
+    { name = "uvicorn", extra = ["standard"] },
+]
+training = [
+    { name = "bitsandbytes", marker = "sys_platform != 'darwin'" },
+    { name = "nvidia-ml-py" },
+    { name = "peft" },
+    { name = "pillow" },
+    { name = "psutil" },
+    { name = "timm" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "accelerate", marker = "extra == 'all'", specifier = ">=0.30" },
+    { name = "accelerate", marker = "extra == 'runtime'", specifier = ">=0.30" },
+    { name = "av", marker = "extra == 'all'", specifier = ">=12" },
+    { name = "av", marker = "extra == 'runtime'", specifier = ">=12" },
+    { name = "bitsandbytes", marker = "sys_platform != 'darwin' and extra == 'all'", specifier = ">=0.43" },
+    { name = "bitsandbytes", marker = "sys_platform != 'darwin' and extra == 'training'", specifier = ">=0.43" },
+    { name = "cloudpickle", marker = "extra == 'all'", specifier = ">=3.1" },
+    { name = "cloudpickle", marker = "extra == 'runtime'", specifier = ">=3.1" },
+    { name = "controlnet-aux", marker = "extra == 'all'", specifier = ">=0.0.7" },
+    { name = "controlnet-aux", marker = "extra == 'runtime'", specifier = ">=0.0.7" },
+    { name = "diffusers", marker = "extra == 'all'", specifier = "==0.39.0" },
+    { name = "diffusers", marker = "extra == 'runtime'", specifier = "==0.39.0" },
+    { name = "einops", marker = "extra == 'all'", specifier = ">=0.7" },
+    { name = "einops", marker = "extra == 'runtime'", specifier = ">=0.7" },
+    { name = "fastapi", marker = "extra == 'all'", specifier = ">=0.110" },
+    { name = "fastapi", marker = "extra == 'server'", specifier = ">=0.110" },
+    { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27" },
+    { name = "huggingface-hub", marker = "extra == 'all'", specifier = ">=0.32" },
+    { name = "huggingface-hub", marker = "extra == 'runtime'", specifier = ">=0.32" },
+    { name = "imageio-ffmpeg", marker = "extra == 'all'", specifier = ">=0.4" },
+    { name = "imageio-ffmpeg", marker = "extra == 'server'", specifier = ">=0.4" },
+    { name = "numpy", specifier = ">=1.26" },
+    { name = "nvidia-ml-py", marker = "extra == 'all'", specifier = ">=12" },
+    { name = "nvidia-ml-py", marker = "extra == 'parallel'", specifier = ">=12" },
+    { name = "nvidia-ml-py", marker = "extra == 'training'", specifier = ">=12" },
+    { name = "onnxruntime", marker = "extra == 'all'", specifier = ">=1.17" },
+    { name = "onnxruntime", marker = "extra == 'runtime'", specifier = ">=1.17" },
+    { name = "openimageio", marker = "extra == 'all'", specifier = ">=3.0" },
+    { name = "openimageio", marker = "extra == 'runtime'", specifier = ">=3.0" },
+    { name = "peft", marker = "extra == 'all'", specifier = ">=0.11" },
+    { name = "peft", marker = "extra == 'training'", specifier = ">=0.11" },
+    { name = "pillow", marker = "extra == 'all'", specifier = ">=10" },
+    { name = "pillow", marker = "extra == 'training'", specifier = ">=10" },
+    { name = "psutil", specifier = ">=5.9" },
+    { name = "psutil", marker = "extra == 'all'", specifier = ">=5.9" },
+    { name = "psutil", marker = "extra == 'training'", specifier = ">=5.9" },
+    { name = "pyright", marker = "extra == 'dev'", specifier = ">=1.1" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6" },
+    { name = "safetensors", marker = "extra == 'all'", specifier = ">=0.4" },
+    { name = "safetensors", marker = "extra == 'runtime'", specifier = ">=0.4" },
+    { name = "scalar-fastapi", marker = "extra == 'all'", specifier = ">=1.9,<2" },
+    { name = "scalar-fastapi", marker = "extra == 'server'", specifier = ">=1.9,<2" },
+    { name = "scipy", marker = "extra == 'all'", specifier = ">=1.11" },
+    { name = "scipy", marker = "extra == 'runtime'", specifier = ">=1.11" },
+    { name = "timm", marker = "extra == 'all'", specifier = ">=1.0" },
+    { name = "timm", marker = "extra == 'training'", specifier = ">=1.0" },
+    { name = "torch", marker = "sys_platform == 'win32' and extra == 'all'", specifier = ">=2.2", index = "https://download.pytorch.org/whl/cu126" },
+    { name = "torch", marker = "sys_platform == 'win32' and extra == 'runtime'", specifier = ">=2.2", index = "https://download.pytorch.org/whl/cu126" },
+    { name = "torch", marker = "sys_platform != 'win32' and extra == 'all'", specifier = ">=2.2" },
+    { name = "torch", marker = "sys_platform != 'win32' and extra == 'runtime'", specifier = ">=2.2" },
+    { name = "torchao", marker = "extra == 'all'", specifier = ">=0.14" },
+    { name = "torchao", marker = "extra == 'runtime'", specifier = ">=0.14" },
+    { name = "torchaudio", marker = "extra == 'all'" },
+    { name = "torchaudio", marker = "extra == 'runtime'" },
+    { name = "transformers", marker = "extra == 'all'", specifier = ">=5.8,<5.15" },
+    { name = "transformers", marker = "extra == 'runtime'", specifier = ">=5.8,<5.15" },
+    { name = "uvicorn", extras = ["standard"], marker = "extra == 'all'", specifier = ">=0.29" },
+    { name = "uvicorn", extras = ["standard"], marker = "extra == 'server'", specifier = ">=0.29" },
+    { name = "xfuser", marker = "extra == 'parallel'", specifier = ">=0.4" },
+]
+provides-extras = ["runtime", "server", "parallel", "training", "dev", "all"]
 
 [[package]]
 name = "onnxruntime"
@@ -1855,6 +1859,20 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/8e/3f/73ccf82579412b4a71c4ca673f10b5f1f888d7cf5af7fe24f27d30307be4/safetensors-0.8.0-cp310-abi3-win32.whl", hash = "sha256:2ddf52eac562eda224f99acfa7889d02968c1fd59a5b011ae7d8137c37e9c02d", size = 342401, upload-time = "2026-06-09T07:52:28.895Z" },
     { url = "https://files.pythonhosted.org/packages/1b/6d/3fba214c1e5e0f69991677ec3bc17023f0421776975e1de0c682dca475e2/safetensors-0.8.0-cp310-abi3-win_amd64.whl", hash = "sha256:096ec1a98435df7beb08853bb5aa9081a84f23d0adc67ed1a0a10550f608373f", size = 355540, upload-time = "2026-06-09T07:52:27.832Z" },
     { url = "https://files.pythonhosted.org/packages/8d/fc/7eedc3510d97878876e32774eebbeb61c43f148a96e915c84229a3e967aa/safetensors-0.8.0-cp310-abi3-win_arm64.whl", hash = "sha256:f7838e5135a406ad3e02efdcb8cf2e5397d368b0154537c4fec682dbc544d452", size = 340500, upload-time = "2026-06-09T07:52:26.745Z" },
+]
+
+[[package]]
+name = "scalar-fastapi"
+version = "1.9.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "pydantic" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c0/44/5140a89b49b5949cd5d09be73c2c78ae9a83e6ae0990444c92f29ffa5bf0/scalar_fastapi-1.9.0.tar.gz", hash = "sha256:f9d01cd97a3e01188df61cc41c4525cf733ee67feb6e5bc0a65cd197e5062633", size = 10776, upload-time = "2026-08-28T11:33:22.787Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f3/24/cf263f24cd34b720c8e2567fca69036be13113b1e9e8a218104d1481316c/scalar_fastapi-1.9.0-py3-none-any.whl", hash = "sha256:7aa67d9d4b3bde7e5eab86a8d16637ab743f3259090bb6bee6a33cf4293f1293", size = 8536, upload-time = "2026-08-28T11:33:21.75Z" },
 ]
 
 [[package]]

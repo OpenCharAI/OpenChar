@@ -12,7 +12,7 @@ replaces ComfyUI for OpenChar.**
 > headless and knows nothing about the UI.
 
 > **Naming:** the product was renamed from Inline Studio to **OpenChar Studio**, and this engine is
-> still called **Inline Core**. That is deliberate: the PyPI package is `openchar-core` but the
+> still called **Inline Core**. That is deliberate: the PyPI package is `omnichar-core` but the
 > import path is `inline_core`, because users and extensions already depend on it. Do not rename the
 > module, the `INLINE_*` env vars, or the `.inlinestudio` project folders.
 
