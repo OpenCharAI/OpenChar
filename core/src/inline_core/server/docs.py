@@ -14,7 +14,7 @@ from . import schemas
 from .rpc import RpcRouter
 
 API_DESCRIPTION = """
-The engine behind OpenChar Studio. Send it a graph of nodes, it renders, you fetch the files.
+The engine behind Omnichar Studio. Send it a graph of nodes, it renders, you fetch the files.
 
 ```
 Graph (what to make)  ->  Run (one execution)  ->  Takes (the output files)

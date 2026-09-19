@@ -76,7 +76,7 @@ export function WorkflowsDialog({
           <p className="mb-3 text-[11px] text-red-300/90">{importError}</p>
         ) : catalogue?.stale && entries.length > 0 ? (
           <p className="mb-3 text-[11px] text-amber-300/80">
-            Showing a saved copy. Couldn&apos;t reach inlinestudio.art.
+            Showing a saved copy. Couldn&apos;t reach omnichar.org.
           </p>
         ) : null}
 

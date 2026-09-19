@@ -46,7 +46,7 @@ export function ProjectLauncher(): React.JSX.Element {
           <header className="mb-8 text-center">
             <div className="flex items-center justify-center gap-3">
               <Logo size={44} />
-              <h1 className="text-4xl font-semibold tracking-tight text-white">OpenChar Studio</h1>
+              <h1 className="text-4xl font-semibold tracking-tight text-white">Omnichar Studio</h1>
             </div>
             <p className="mx-auto mt-3 max-w-xl text-sm text-zinc-400">
               Build multi model consistent characters, train LoRAs, and generate on your own GPU.
@@ -148,15 +148,15 @@ export function ProjectLauncher(): React.JSX.Element {
 
       <div className="mx-auto flex w-full max-w-4xl items-center justify-between pt-10 text-xs text-zinc-500">
         <button
-          onClick={() => void studio().shell.openExternal('https://inlinestudio.art')}
+          onClick={() => void studio().shell.openExternal('https://omnichar.org')}
           className="flex items-center gap-1.5 text-accent underline-offset-2 hover:underline"
         >
-          inlinestudio.art
+          omnichar.org
           <ExternalLinkIcon />
         </button>
 
         <div className="flex items-center gap-3">
-          {currentVersion && <span>OpenChar v{currentVersion}</span>}
+          {currentVersion && <span>Omnichar v{currentVersion}</span>}
           {updateAvailable && (
             <button
               onClick={() => void openReleases()}

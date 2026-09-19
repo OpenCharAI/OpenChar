@@ -258,10 +258,10 @@ def create_app(
         manager.shutdown()
 
     app = FastAPI(
-        title="OpenChar Studio APIs",
+        title="Omnichar Studio APIs",
         version=__version__,
         summary=(
-            "The generation engine behind OpenChar Studio: "
+            "The generation engine behind Omnichar Studio: "
             "typed node graphs in, immutable takes out."
         ),
         lifespan=lifespan,

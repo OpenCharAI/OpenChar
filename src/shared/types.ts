@@ -985,7 +985,7 @@ export interface ExportResult {
   skipped: string[]
 }
 
-// --- published workflow catalogue (inlinestudio.art) ------------------------------------------
+// --- published workflow catalogue (omnichar.org) ------------------------------------------
 
 /** Which axis a category sits on. The Workflows rail draws the two as separate blocks. */
 export type WorkflowCategoryKind = 'type' | 'model'
@@ -1016,7 +1016,7 @@ export interface WorkflowSummary {
   inputCount: number
   publishedAt: string | null
   updatedAt: string | null
-  /** The write-up on inlinestudio.art. On the card so the link costs no detail fetch. */
+  /** The write-up on omnichar.org. On the card so the link costs no detail fetch. */
   pageUrl?: string
 }
 

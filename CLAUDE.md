@@ -1,14 +1,14 @@
-# OpenChar Studio - Engineering Guide
+# Omnichar Studio - Engineering Guide
 
-OpenChar Studio is an **experimentation layer for visual artists**: a free-form node canvas for
+Omnichar Studio is an **experimentation layer for visual artists**: a free-form node canvas for
 building generative pipelines frame-by-frame. The **Inline Core** engine (`core/`) does the actual
 image/video generation behind each frame - diffusion models run locally (Z-Image Turbo and others),
 plus closed models via fal.ai.
 
-> **Naming:** the project is **OpenChar Studio**, shortened to **OpenChar**. It was renamed from
-> Inline Studio; use the new name in anything you write. **Do not use the old "Storyline" codename**
-> anywhere new (docs, identifiers, UI strings). Legacy `STORYLINE_*` env vars and `.storyline` paths
-> still exist in code - treat them as deprecated, don't add more.
+> **Naming:** the project is **Omnichar Studio**, shortened to **Omnichar**. It has been renamed
+> twice - Inline Studio, then OpenChar Studio - so "OpenChar" and the old "Storyline" codename are
+> both wrong in anything new (docs, identifiers, UI strings). Legacy `STORYLINE_*` env vars and
+> `.storyline` paths still exist in code; treat them as deprecated, don't add more.
 >
 > The rename is deliberately **incomplete at the code level, and that is not a bug to fix**. These
 > stay as they are until a migration is planned, because changing one breaks installs or on-disk
@@ -19,43 +19,44 @@ plus closed models via fal.ai.
 > | `INLINE_*` env vars (`INLINE_HOST`, `INLINE_MODELS_DIR`, …) | A rename breaks every existing launch script and RunPod template.                                                 |
 > | The `inline_core` Python module and `core/src/inline_core/` | The import path users and extensions already depend on.                                                           |
 > | `.inlinestudio` project folders                             | On-disk data in the wild; renaming orphans people's projects.                                                     |
-> | `inlinestudio.art`                                          | The live domain.                                                                                                  |
+> | `.inline-studio-server` and `InlineStudioProjects`          | On-disk paths an installed app already reads and writes.                                                          |
 > | `"name": "inline-studio"` in `package.json`                 | Nothing is published to npm - this package builds the SPA, which ships inside the `omnichar-frontend` PyPI wheel. |
 >
-> What **has** been renamed: the product name, the GitHub org, this repo, and the PyPI packages
+> What **has** been renamed: the product name, the GitHub org, this repo, the website
+> (`omnichar.org`, which `inlinestudio.art` now redirects to) and the PyPI packages
 > (`omnichar-core`, `omnichar-frontend`).
 >
-> OpenChar Studio is the **single repo**: it holds the UI client (`src/`) **and** the **Inline Core**
+> Omnichar Studio is the **single repo**: it holds the UI client (`src/`) **and** the **Inline Core**
 > Python generation engine (`core/`, brought in via `git subtree`). One process serves both -
 > `cd core && python main.py --front-end-root ../dist-web` runs Core and serves the built UI on one
 > port.
 
-> **GitHub org: `OpenCharAI`.** The org moved from `inlineresearch` and this repo moved with it,
-> from `Inline-Studio` to `OpenChar`. The old URLs still 301-redirect, so a stale `git remote` keeps
-> working - never write an `inlineresearch/` URL in anything new. Note the other repos kept their
-> `Inline-*` names; only the org and this repo were renamed.
+> **GitHub org: `omnichar`.** The org moved `inlineresearch` -> `OpenCharAI` -> `omnichar`, and this
+> repo moved with it, `Inline-Studio` -> `OpenChar` -> `OmniChar`. The old URLs still 301-redirect, so
+> a stale `git remote` keeps working - never write an `inlineresearch/` or `OpenCharAI/` URL in
+> anything new. Note the other repos kept their `Inline-*` names; only the org and this repo moved.
 >
-> | Repo                                                                                                      | What it is                                            |
-> | --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-> | [`OpenCharAI/OpenChar`](https://github.com/OpenCharAI/OpenChar)                                           | This repo: the UI client + Inline Core                |
-> | [`OpenCharAI/Inline-Core`](https://github.com/OpenCharAI/Inline-Core)                                     | The engine's own repo (subtree source for `core/`)    |
-> | [`OpenCharAI/Inline-Registry`](https://github.com/OpenCharAI/Inline-Registry)                             | The published extension index the Available tab reads |
-> | [`OpenCharAI/Inline-Studio-Extension-Guide`](https://github.com/OpenCharAI/Inline-Studio-Extension-Guide) | The reference extension authors copy                  |
+> | Repo                                                                                                  | What it is                                            |
+> | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+> | [`omnichar/OmniChar`](https://github.com/omnichar/OmniChar)                                           | This repo: the UI client + Inline Core                |
+> | [`omnichar/Inline-Core`](https://github.com/omnichar/Inline-Core)                                     | The engine's own repo (subtree source for `core/`)    |
+> | [`omnichar/Inline-Registry`](https://github.com/omnichar/Inline-Registry)                             | The published extension index the Available tab reads |
+> | [`omnichar/Inline-Studio-Extension-Guide`](https://github.com/omnichar/Inline-Studio-Extension-Guide) | The reference extension authors copy                  |
 >
 > **This app is local-first and needs no account.** It runs on the user's own GPU. Do not add a
 > hosted service, a login, a telemetry call or a billing dependency to this repo. Generation lives
 > in `core/` and stays there.
 >
 > **Hugging Face org: [`inlineresearch`](https://huggingface.co/inlineresearch)** - published models
-> and datasets trained with the app. **This did NOT move to OpenCharAI**; there is no OpenCharAI org
-> on Hugging Face. Leave these URLs alone.
+> and datasets trained with the app. **This did NOT move**; there is no `omnichar` org on Hugging
+> Face. Leave these URLs alone.
 >
 > | Hugging Face repo                                                                                   | What it is                                              |
 > | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
 > | [`inlineresearch/skin-lora-krea-2-raw`](https://huggingface.co/inlineresearch/skin-lora-krea-2-raw) | Skin-texture LoRA for Krea 2 RAW, trained on the canvas |
 > | [`inlineresearch/krea2-skin-lora`](https://huggingface.co/datasets/inlineresearch/krea2-skin-lora)  | The 26 image + caption pairs that LoRA trained on       |
 >
-> Website: [inlinestudio.art](https://inlinestudio.art).
+> Website: [omnichar.org](https://omnichar.org).
 
 > Read this file before changing code. It defines the architecture and the non-negotiable rules.
 
@@ -79,7 +80,7 @@ If you're tempted to treat a frame as a file, stop - the take history is the cor
 
 ## Architecture
 
-OpenChar Studio is a **web SPA** (React, `src/`) served by **Inline Core** (the Python engine, `core/`)
+Omnichar Studio is a **web SPA** (React, `src/`) served by **Inline Core** (the Python engine, `core/`)
 on a single port. One process: `core/main.py` runs Core, which serves the built UI _and_ is the app's
 backend. (The former Electron desktop app + Node web server were **retired** - the whole backend was
 ported to Python. If you find a reference to `electron/`, `server/`, `window.inlineStudio`, or a

@@ -2,7 +2,7 @@ import { studio } from '@/lib/studio'
 import { MovieIcon } from '../../components/icons'
 
 /** The MiniMax H3 LoRA training guide on the site. */
-const H3_TRAINING_URL = 'https://inlinestudio.art/lora-training/minimax-h3'
+const H3_TRAINING_URL = 'https://omnichar.org/lora-training/minimax-h3'
 
 /**
  * A home-screen card for the newest thing the app does: train a MiniMax H3 LoRA on your own clips,

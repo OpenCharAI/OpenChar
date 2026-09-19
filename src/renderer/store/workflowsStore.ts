@@ -68,9 +68,7 @@ export const useWorkflowsStore = create<WorkflowsState>((set, get) => ({
       catalogue,
       loading: false,
       error:
-        catalogue.stale && catalogue.entries.length === 0
-          ? "Couldn't reach inlinestudio.art."
-          : null,
+        catalogue.stale && catalogue.entries.length === 0 ? "Couldn't reach omnichar.org." : null,
     })
   },
 

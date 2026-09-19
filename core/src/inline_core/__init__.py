@@ -1,4 +1,4 @@
-"""Inline Core: the generation engine behind OpenChar Studio."""
+"""Inline Core: the generation engine behind Omnichar Studio."""
 
 import tomllib
 from importlib.metadata import PackageNotFoundError, version
