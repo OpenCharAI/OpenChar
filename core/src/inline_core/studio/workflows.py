@@ -18,7 +18,7 @@ from urllib.parse import urlencode
 from . import config as cfg
 
 #: Overridable so a staging site can be pointed at without a rebuild.
-DEFAULT_CATALOGUE_URL = "https://inlinestudio.art"
+DEFAULT_CATALOGUE_URL = "https://omnichar.org"
 
 _TIMEOUT = 10
 

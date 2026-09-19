@@ -1,4 +1,4 @@
-"""Inline Core: the generation engine behind OpenChar Studio."""
+"""Inline Core: the generation engine behind Omnichar Studio."""
 
 import tomllib
 from importlib.metadata import PackageNotFoundError, version
@@ -22,7 +22,7 @@ def _running_version() -> str:
     from_source = _source_version()
     if from_source:
         return from_source
-    for distribution in ("openchar-core", "inline-core"):
+    for distribution in ("omnichar-core", "openchar-core", "inline-core"):
         try:
             return version(distribution)
         except PackageNotFoundError:

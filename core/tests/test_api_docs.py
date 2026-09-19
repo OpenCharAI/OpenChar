@@ -71,7 +71,7 @@ def _operations(schema: dict[str, Any]) -> list[tuple[str, str, dict[str, Any]]]
 def test_the_document_is_named_and_versioned(wired: Wired) -> None:
     info = _schema(wired.client)["info"]
 
-    assert info["title"] == "OpenChar Studio APIs"
+    assert info["title"] == "Omnichar Studio APIs"
     assert info["version"] == __version__
 
 
@@ -178,7 +178,7 @@ def test_the_reference_page_is_served(tmp_path: Path) -> None:
 
     assert page.status_code == 200
     assert page.headers["content-type"].startswith("text/html")
-    assert "OpenChar Studio APIs" in page.text
+    assert "Omnichar Studio APIs" in page.text
 
 
 @pytest.mark.parametrize(
@@ -221,5 +221,5 @@ def test_the_reference_wins_over_the_spa_catch_all(tmp_path: Path) -> None:
 
     with TestClient(app) as client:
         assert client.get("/").text.count("SPA") == 1
-        assert "OpenChar Studio APIs" in client.get("/api").text
+        assert "Omnichar Studio APIs" in client.get("/api").text
         assert client.get(f"/api/scalar-{SCALAR_VERSION}.js").status_code == 200

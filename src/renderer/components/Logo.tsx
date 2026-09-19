@@ -1,11 +1,11 @@
 import logoUrl from '../assets/logo.svg'
 
-/** The OpenChar logo mark. Sized via `size` (px). */
+/** The Omnichar logo mark. Sized via `size` (px). */
 export function Logo({ size = 28 }: { size?: number }): React.JSX.Element {
   return (
     <img
       src={logoUrl}
-      alt="OpenChar"
+      alt="Omnichar"
       width={size}
       height={size}
       className="rounded"

@@ -1315,7 +1315,7 @@ def load_flux1_transformer(
             raise ComponentError(
                 f"{Path(file).name} did not load: {blocked}, and diffusers splits those as if they "
                 "were weights. A full-precision or .gguf build of the same model will work, and "
-                "OpenChar quantizes on load to fit your card either way."
+                "Omnichar quantizes on load to fit your card either way."
             ) from error
         if _is_gguf(file):
             if loras:

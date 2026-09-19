@@ -13,7 +13,7 @@ A free, open-source app for AI generation where your characters stay the same. B
 [![Discord][discord-shield]][discord-url]
 [![Reddit][reddit-shield]][reddit-url]
 
-<img width="1590" alt="Inline Studio Screenshot" src="https://raw.githubusercontent.com/inlineresearch/Inline-Studio/main/screenshots/hero.png" />
+<img width="1590" alt="Inline Studio Screenshot" src="https://raw.githubusercontent.com/omnichar/OmniChar/main/screenshots/hero.png" />
 
 </div>
 
@@ -21,16 +21,16 @@ A free, open-source app for AI generation where your characters stay the same. B
 [license-url]: LICENSE
 [python-shield]: https://img.shields.io/badge/Python-3.11%2B-blue?style=flat&logo=python&logoColor=white
 [python-url]: https://www.python.org/downloads/
-[release-shield]: https://img.shields.io/github/v/release/inlineresearch/Inline-Studio?style=flat&label=Release&color=blue
+[release-shield]: https://img.shields.io/github/v/release/omnichar/OmniChar?style=flat&label=Release&color=blue
 [release-url]: ../../releases/latest
 [discord-shield]: https://img.shields.io/badge/Discord-Join%20the%20community-5865F2?logo=discord&logoColor=white&style=flat
 [discord-url]: https://discord.gg/cSUS88VdY9
 [reddit-shield]: https://img.shields.io/badge/Reddit-r%2Finlinestudio-FF4500?logo=reddit&logoColor=white&style=flat
 [reddit-url]: https://www.reddit.com/r/inlinestudio/
 
-[**New here? Start with the getting started guide →**](https://inlinestudio.art/getting-started)
+[**New here? Start with the getting started guide →**](https://omnichar.org/getting-started)
 
-[**Explore workflows →**](https://inlinestudio.art/workflows)
+[**Explore workflows →**](https://omnichar.org/workflows)
 
 ## Supported models
 
@@ -63,8 +63,8 @@ and the UI.
 **macOS / Linux:**
 
 ```bash
-git clone https://github.com/OpenCharAI/OpenChar
-cd OpenChar/core
+git clone https://github.com/omnichar/OmniChar
+cd OmniChar/core
 ./webui.sh --install --extra all
 ./webui.sh                         # http://127.0.0.1:8848
 ```
@@ -72,8 +72,8 @@ cd OpenChar/core
 **Windows** (use `webui.bat`; `webui.sh` is a bash script and will not run in PowerShell):
 
 ```powershell
-git clone https://github.com/OpenCharAI/OpenChar
-cd OpenChar/core
+git clone https://github.com/omnichar/OmniChar
+cd OmniChar/core
 .\webui.bat --install --extra all
 .\webui.bat
 
@@ -91,9 +91,9 @@ Both versions are printed at launch, and Inline Studio checks PyPI once a day in
 says so when either half is behind:
 
 ```
-Versions: openchar-core 1.3.16, openchar-frontend 1.3.15
-UPDATE AVAILABLE: openchar-frontend 1.3.15 -> 1.3.16
-  Update with: ./webui.sh --install  (or: pip install -U openchar-frontend)
+Versions: omnichar-core 1.3.16, omnichar-frontend 1.3.15
+UPDATE AVAILABLE: omnichar-frontend 1.3.15 -> 1.3.16
+  Update with: ./webui.sh --install  (or: pip install -U omnichar-frontend)
 ```
 
 Set `INLINE_NO_UPDATE_CHECK=1` to skip the check.
@@ -152,7 +152,7 @@ uv pip install --python .venv/bin/python --force-reinstall \
 
 Do not run `uv sync` or pass `--recreate` afterwards; both put the PyPI torch back over your ROCm
 build. The dtype heuristics key off NVIDIA compute capability, which is meaningless on RDNA and
-CDNA, so [open an issue](https://github.com/inlineresearch/Inline-Studio/issues) either way.
+CDNA, so [open an issue](https://github.com/omnichar/OmniChar/issues) either way.
 
 #### Generation VRAM, so you can judge before downloading
 
@@ -196,9 +196,9 @@ Getting the same person across shots normally means training a LoRA for each one
 same reference photos into every node by hand. Build a character once instead, then pick it from a
 dropdown.
 
-[![Body, face, shirt and jeans wired in as separate references on the canvas, and the same person generated walking a street in that outfit](https://raw.githubusercontent.com/inlineresearch/Inline-Studio/main/screenshots/char-mm-poster.png)](https://inlinestudio.art/workflows/minimax-h3-guided-consistent-characters-via-reference-identity-face-body-cloths)
+[![Body, face, shirt and jeans wired in as separate references on the canvas, and the same person generated walking a street in that outfit](https://raw.githubusercontent.com/omnichar/OmniChar/main/screenshots/char-mm-poster.png)](https://omnichar.org/workflows/minimax-h3-guided-consistent-characters-via-reference-identity-face-body-cloths)
 
-[**Workflow: Minimax H3. Consistent face, body & cloths via reference identity →**](https://inlinestudio.art/workflows/minimax-h3-guided-consistent-characters-via-reference-identity-face-body-cloths)
+[**Workflow: Minimax H3. Consistent face, body & cloths via reference identity →**](https://omnichar.org/workflows/minimax-h3-guided-consistent-characters-via-reference-identity-face-body-cloths)
 
 Drop in a photo or two and Inline Studio compiles a **`.char`**: one portable file holding your
 references and an identity fingerprint. Describe the scene, and the references carry the likeness.
@@ -220,7 +220,7 @@ Not every hosted model will take a face. Seedance 2.0 rejects any reference imag
 a character reaches it as build and wardrobe only. The node says so before you run, rather than
 after you have paid for a video of somebody else.
 
-[**How characters work, in detail →**](https://inlinestudio.art/characters)
+[**How characters work, in detail →**](https://omnichar.org/characters)
 
 ## Train a LoRA
 
@@ -229,7 +229,7 @@ nodes sit on the same canvas as everything else: wire them up, press Start, watc
 finished `.safetensors` lands in `models/loras/`, where the LoRA loader node picks it up, so you can
 generate with it straight away.
 
-![Inline Studio showing the LoRA training node graph with a dataset, live logs, and a loss curve](https://raw.githubusercontent.com/inlineresearch/Inline-Studio/main/screenshots/lora-trainer.png)
+![Inline Studio showing the LoRA training node graph with a dataset, live logs, and a loss curve](https://raw.githubusercontent.com/omnichar/OmniChar/main/screenshots/lora-trainer.png)
 
 ```
 [ Load Dataset ] --> [ Caption ] --> [ Train LoRA ] --> [ Graph ]
@@ -269,7 +269,7 @@ Drop a model node, wire a prompt, hit Run. One node, no loader or sampler wiring
 `.safetensors` in `core/models/diffusion_models/`, or use the node's model popup to download the
 diffusion model, VAE and text encoder with visible progress. Nothing is fetched behind your back.
 
-![Z-Image Turbo generating locally on the Inline Core engine](https://raw.githubusercontent.com/inlineresearch/Inline-Studio/main/screenshots/zit.png)
+![Z-Image Turbo generating locally on the Inline Core engine](https://raw.githubusercontent.com/omnichar/OmniChar/main/screenshots/zit.png)
 
 - **Z-Image Turbo** is the low-VRAM starting point, distilled to run CFG-free.
 - **[Krea 2](https://www.krea.ai/)** is a 12.9B MMDiT, published as an undistilled RAW base
@@ -278,7 +278,7 @@ diffusion model, VAE and text encoder with visible progress. Nothing is fetched 
   prompt addresses them by position. One node covers klein 4B and 9B, their Base builds, and dev.
 - **[MiniMax H3](https://huggingface.co/MiniMaxAI/MiniMax-H3)** generates video **and its
   soundtrack** in one pass, as four nodes (text, image, first and last frame, reference). 24fps, 5 to
-  15 seconds. See the [open weights guide](https://inlinestudio.art/minimax-h3-open-weights).
+  15 seconds. See the [open weights guide](https://omnichar.org/minimax-h3-open-weights).
 - **[LTX-2.5](https://huggingface.co/Lightricks/LTX-2.5)** is Lightricks' 22B model, video with sound
   again, as three nodes (text, image, first and last frame). 24fps, 1 to 20 seconds. Every node has a
   **Fast** mode on the distilled transformer and a **Quality** mode on dev.
@@ -392,7 +392,7 @@ into one archive: inputs, outputs and the graph that turned one into the other, 
 can re-run the pipeline exactly. Video Director, Trim Video and Trim Audio nodes cut the result into
 a sequence.
 
-![Inline Studio dashboard with recent projects](https://raw.githubusercontent.com/inlineresearch/Inline-Studio/main/screenshots/screenshot-dashboard.png)
+![Inline Studio dashboard with recent projects](https://raw.githubusercontent.com/omnichar/OmniChar/main/screenshots/screenshot-dashboard.png)
 
 It runs as a single process on one port: the Inline Core engine (Python) serves the web UI and does
 the generation. No desktop install, no separate backend. For the engineering story see
@@ -402,7 +402,7 @@ Every route the app exposes is documented at **`/api`** while it is running - op
 <http://127.0.0.1:8848/api>. The reference is served by the app itself and needs no network. Like
 the rest of the surface it is unauthenticated, so `--listen` publishes it too.
 
-[**Follow the Animated Short Film tutorial →**](https://inlinestudio.art/projects/circuit-race)
+[**Follow the Animated Short Film tutorial →**](https://omnichar.org/projects/circuit-race)
 
 ## Extensions
 
@@ -411,7 +411,7 @@ install is security-reviewed, dependencies are isolated from the shared torch ru
 appear on the canvas immediately with no restart.
 
 Browse the [registry](https://github.com/inlineresearch/Inline-Registry), or copy the
-[extension guide](https://github.com/inlineresearch/Inline-Studio-Extension-Guide) to build your own.
+[extension guide](https://github.com/omnichar/Inline-Studio-Extension-Guide) to build your own.
 
 ## FAQ
 

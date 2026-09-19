@@ -3,7 +3,7 @@ import characterCover from '../../assets/h3-character.jpg'
 
 /** A published workflow that builds a portable .char from a handful of references. */
 const DEMO_URL =
-  'https://inlinestudio.art/workflows/minimax-h3-consistent-characters-with-references-with-char-model'
+  'https://omnichar.org/workflows/minimax-h3-consistent-characters-with-references-with-char-model'
 
 /** The "Try a demo" card: opens the consistent-character workflow in the browser. */
 export function DemoSampleCard(): React.JSX.Element {

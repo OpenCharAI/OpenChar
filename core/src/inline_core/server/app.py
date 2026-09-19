@@ -105,7 +105,7 @@ def _setup_app_logging() -> None:
     logger = logging.getLogger("inline_core")
     if not logger.handlers:
         handler = logging.StreamHandler()
-        handler.setFormatter(logging.Formatter("%(levelname)s:     [openchar-core] %(message)s"))
+        handler.setFormatter(logging.Formatter("%(levelname)s:     [omnichar-core] %(message)s"))
         logger.addHandler(handler)
         logger.propagate = False
     logger.setLevel(os.environ.get("INLINE_LOG_LEVEL", "INFO").upper())
@@ -258,10 +258,10 @@ def create_app(
         manager.shutdown()
 
     app = FastAPI(
-        title="OpenChar Studio APIs",
+        title="Omnichar Studio APIs",
         version=__version__,
         summary=(
-            "The generation engine behind OpenChar Studio: "
+            "The generation engine behind Omnichar Studio: "
             "typed node graphs in, immutable takes out."
         ),
         lifespan=lifespan,

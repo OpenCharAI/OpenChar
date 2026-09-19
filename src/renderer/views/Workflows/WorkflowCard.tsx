@@ -89,7 +89,7 @@ export function WorkflowCard({
             <EyeIcon className="h-3 w-3" />
             {compact(card.viewCount)}
           </span>
-          <span className={COUNT} title="Downloaded from inlinestudio.art">
+          <span className={COUNT} title="Downloaded from omnichar.org">
             <DownloadIcon className="h-3 w-3" />
             {compact(card.downloadCount)}
           </span>

@@ -1,6 +1,6 @@
 """A runtime-less install must still boot: the models are skipped, the server is not.
 
-`requirements.txt` offers `openchar-core[server]` for a hosted-only setup with no local GPU, and
+`requirements.txt` offers `omnichar-core[server]` for a hosted-only setup with no local GPU, and
 this is the only test holding that promise. It was broken in a released build: Control Space is
 registered unguarded on the belief it is torch-free, and importing it reached `zimage.requirements`
 through `zimage/__init__.py`, which eagerly imported the runner and torch.

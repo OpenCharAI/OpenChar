@@ -14,9 +14,15 @@ from pathlib import Path
 from typing import Any, cast
 
 from ..config import data_dir
+from .frontend import package_static
 
-CORE_PACKAGE = "openchar-core"
-FRONTEND_PACKAGE = "openchar-frontend"
+#: Both halves were renamed with the product. The old names stay in the lookup because an install
+#: that predates the rename must still be told its own version, and told about its own updates:
+#: pointing someone at a project they do not have installed is how an update check goes silent.
+CORE_PACKAGES = ("omnichar-core", "openchar-core", "inline-core")
+FRONTEND_PACKAGES = ("omnichar-frontend", "openchar-frontend")
+CORE_PACKAGE = CORE_PACKAGES[0]
+FRONTEND_PACKAGE = FRONTEND_PACKAGES[0]
 
 #: A day: long enough that a restart loop never hammers PyPI, short enough to notice a release.
 CACHE_TTL_SECONDS = 24 * 60 * 60
@@ -33,19 +39,28 @@ class Component:
     origin: str
 
 
+def installed_name(names: tuple[str, ...]) -> tuple[str, str | None]:
+    """The first of these distributions that is actually installed, and its version."""
+    for name in names:
+        found = _installed(name)
+        if found is not None:
+            return name, found
+    return names[0], None
+
+
 def core_component() -> Component:
     """An editable install records its version at install time, so the number can lag the source."""
-    return Component(
-        CORE_PACKAGE, _installed(CORE_PACKAGE), "editable" if _is_editable(CORE_PACKAGE) else ""
-    )
+    package, found = installed_name(CORE_PACKAGES)
+    return Component(package, found, "editable" if _is_editable(package) else "")
 
 
 def frontend_component(frontend_root: str | None) -> Component:
+    package, found = installed_name(FRONTEND_PACKAGES)
     if frontend_root is None:
-        return Component(FRONTEND_PACKAGE, None, "not installed")
+        return Component(package, None, "not installed")
     if _is_package_static(frontend_root):
-        return Component(FRONTEND_PACKAGE, _installed(FRONTEND_PACKAGE), "")
-    return Component(FRONTEND_PACKAGE, None, f"local build: {frontend_root}")
+        return Component(package, found, "")
+    return Component(package, None, f"local build: {frontend_root}")
 
 
 def report_versions(frontend_root: str | None) -> None:
@@ -72,7 +87,7 @@ def update_lines(component: Component, latest: str | None) -> list[str]:
         return []
     launcher = ".\\webui.bat" if os.name == "nt" else "./webui.sh"
     hint = f"{launcher} --install"
-    if component.package == CORE_PACKAGE and component.origin == "editable":
+    if component.package in CORE_PACKAGES and component.origin == "editable":
         hint = f"git pull, then {hint}"
     return [
         f"UPDATE AVAILABLE: {component.package} {component.version} -> {latest}",
@@ -152,14 +167,9 @@ def _is_editable(package: str) -> bool:
 
 def _is_package_static(frontend_root: str) -> bool:
     """INLINE_FRONTEND_ROOT can name the package's own static dir, which is still the package."""
-    try:
-        import openchar_frontend  # type: ignore[import-not-found]
-    except ModuleNotFoundError:
+    static = package_static()
+    if static is None:
         return False
-    pkg_file = getattr(openchar_frontend, "__file__", None)
-    if not pkg_file:
-        return False
-    static = Path(pkg_file).parent / "static"
     try:
         return static.resolve() == Path(frontend_root).resolve()
     except OSError:

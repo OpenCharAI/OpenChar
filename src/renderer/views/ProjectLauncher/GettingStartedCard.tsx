@@ -1,7 +1,7 @@
 import { studio } from '@/lib/studio'
 
 /** First-run guide URL. */
-const GETTING_STARTED_URL = 'https://inlinestudio.art/getting-started'
+const GETTING_STARTED_URL = 'https://omnichar.org/getting-started'
 
 /**
  * A simple "Getting started" card for first-time users. Opens the getting-started guide
